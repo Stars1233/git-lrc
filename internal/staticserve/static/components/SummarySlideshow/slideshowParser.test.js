@@ -10,8 +10,10 @@ import {
   buildChapterNavigation,
   buildChapterExplorerCards,
   buildProgressTrackItems,
+  clampSlideIndex,
   getActiveProgressTrackItemKey,
-  getActiveProgressTrackMarkerKey
+  getActiveProgressTrackMarkerKey,
+  resolveSlideshowShortcut
 } from './SummarySlideshow.js';
 
 function testIntroAndSectionSlides() {
@@ -643,6 +645,29 @@ This section introduces the review output and key context in a concise way.
   console.log('✓ Slides eligibility alias headings test passed');
 }
 
+function testSlideshowShortcutsHandleArrowUpAndDigitsSafely() {
+  const arrowUpShortcut = resolveSlideshowShortcut('ArrowUp');
+  const arrowDownShortcut = resolveSlideshowShortcut('ArrowDown');
+  const digitShortcut = resolveSlideshowShortcut('4');
+  const unknownShortcut = resolveSlideshowShortcut('x');
+
+  console.assert(arrowUpShortcut?.type === 'prev', 'ArrowUp should resolve to previous-slide navigation');
+  console.assert(arrowDownShortcut?.type === 'next', 'ArrowDown should resolve to next-slide navigation');
+  console.assert(digitShortcut?.type === 'jump', 'Digit shortcuts should resolve to slide jumps');
+  console.assert(digitShortcut?.slideIndex === 3, 'Digit shortcuts should map to zero-based slide indices');
+  console.assert(unknownShortcut === null, 'Unhandled keys should not resolve to any slideshow shortcut');
+  console.log('✓ Slideshow shortcut mapping regression test passed');
+}
+
+function testClampSlideIndexRejectsInvalidValues() {
+  console.assert(clampSlideIndex(NaN, 5) === 0, 'NaN slide indices should clamp to the first slide');
+  console.assert(clampSlideIndex(Infinity, 5) === 0, 'Infinite slide indices should clamp to the first slide');
+  console.assert(clampSlideIndex(-3, 5) === 0, 'Negative slide indices should clamp to zero');
+  console.assert(clampSlideIndex(9, 5) === 5, 'Slide indices beyond the completion screen should clamp to the completion slide');
+  console.assert(clampSlideIndex(2.8, 5) === 2, 'Fractional slide indices should floor to a stable integer');
+  console.log('✓ Slide index clamping regression test passed');
+}
+
 export function runAllTests() {
   console.group('Running SlideshowParser Tests');
 
@@ -679,6 +704,8 @@ export function runAllTests() {
     testSlidesEligibilityRequiresSections();
     testSlidesEligibilityRejectsEmptySections();
     testSlidesEligibilityAllowsAliases();
+    testSlideshowShortcutsHandleArrowUpAndDigitsSafely();
+    testClampSlideIndexRejectsInvalidValues();
     console.log('\n✅ All tests passed!');
   } catch (error) {
     console.error('❌ Test failed:', error);

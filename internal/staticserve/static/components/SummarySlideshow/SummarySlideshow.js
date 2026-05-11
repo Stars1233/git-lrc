@@ -158,6 +158,50 @@ function resolveSlideTypography(slide) {
     return { fontSize: 'clamp(22px, 2.3vw, 30px)', lineHeight: '1.46', maxWidth: '100%' };
 }
 
+export function clampSlideIndex(value, length) {
+    if (!Number.isFinite(value)) {
+        return 0;
+    }
+    const maxIndex = Math.max(0, length);
+    return Math.max(0, Math.min(Math.floor(value), maxIndex));
+}
+
+export function resolveSlideshowShortcut(key) {
+    const normalizedKey = String(key || '').toLowerCase();
+
+    if (/^[1-9]$/.test(normalizedKey)) {
+        return {
+            type: 'jump',
+            slideIndex: parseInt(normalizedKey, 10) - 1
+        };
+    }
+
+    switch (normalizedKey) {
+        case 'arrowleft':
+        case 'arrowup':
+        case 'h':
+        case 'k':
+            return { type: 'prev' };
+        case 'arrowright':
+        case 'arrowdown':
+        case 'l':
+        case 'j':
+        case ' ':
+            return { type: 'next' };
+        case 'a':
+            return { type: 'autoplay' };
+        case 'c':
+            return { type: 'copy' };
+        case '?':
+            return { type: 'help' };
+        case 'escape':
+        case 'q':
+            return { type: 'close' };
+        default:
+            return null;
+    }
+}
+
 const COMPLETE_TRACK_ITEM_KEY = 'complete';
 const COMPLETE_TRACK_MARKER_KEY = 'complete::marker';
 const COMPLETE_TRACK_TITLE = 'Complete';
@@ -426,14 +470,6 @@ export async function createSummarySlideshow() {
         const chapterExplorerResetTimerRef = useRef(null);
         const sessionStartRef = useRef(null);
 
-        const clampSlideIndex = (value, length) => {
-            if (!Number.isFinite(value)) {
-                return 0;
-            }
-            const maxIndex = Math.max(0, length);
-            return Math.max(0, Math.min(Math.floor(value), maxIndex));
-        };
-
         const clearAutoPlayTimers = () => {
             if (autoPlayTimerRef.current) {
                 clearTimeout(autoPlayTimerRef.current);
@@ -551,10 +587,17 @@ export async function createSummarySlideshow() {
         }, [initialSlideIndex, slides.length]);
 
         useEffect(() => {
+            const normalizedIndex = clampSlideIndex(currentSlide, slides.length);
+            if (normalizedIndex !== currentSlide) {
+                setCurrentSlide(normalizedIndex);
+            }
+        }, [currentSlide, slides.length]);
+
+        useEffect(() => {
             if (!isVisible || !slides.length) {
                 return;
             }
-            onSlideIndexChange(currentSlide);
+            onSlideIndexChange(clampSlideIndex(currentSlide, slides.length));
         }, [currentSlide, isVisible, slides.length, onSlideIndexChange]);
 
         useEffect(() => {
@@ -588,56 +631,51 @@ export async function createSummarySlideshow() {
                     return;
                 }
 
-                const key = event.key.toLowerCase();
-                if (!/^[1-9]$/.test(key) && !['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'h', 'j', 'k', 'l', ' ', '?', 'a', 'c', 'escape', 'q'].includes(key)) {
+                const shortcut = resolveSlideshowShortcut(event.key);
+                if (!shortcut) {
                     return;
                 }
 
                 event.preventDefault();
                 event.stopPropagation();
 
-                if (isHelpShown && (key === '?' || key === 'escape')) {
+                if (isHelpShown && (shortcut.type === 'help' || shortcut.type === 'close')) {
                     setIsHelpShown(false);
                     return;
                 }
 
-                if (isChapterExplorerOpen && key === 'escape') {
+                if (isChapterExplorerOpen && shortcut.type === 'close') {
                     closeChapterExplorer();
                     return;
                 }
 
-                switch (key) {
-                    case 'arrowleft':
-                    case 'h':
-                    case 'k':
+                switch (shortcut.type) {
+                    case 'prev':
                         prevSlide();
                         break;
-                    case 'arrowright':
-                    case 'l':
-                    case 'j':
-                    case ' ':
-                    case 'arrowdown':
+                    case 'next':
                         nextSlide();
                         break;
-                    case 'a':
+                    case 'autoplay':
                         toggleAutoPlay();
                         break;
-                    case 'c':
+                    case 'copy':
                         handleCopy();
                         break;
-                    case '?':
+                    case 'help':
                         setIsHelpShown(true);
                         break;
-                    case 'escape':
-                    case 'q':
+                    case 'close':
                         if (isModal) {
                             handleClose();
                         } else {
                             setIsHelpShown(false);
                         }
                         break;
+                    case 'jump':
+                        moveToSlide(Math.min(shortcut.slideIndex, slides.length - 1));
+                        break;
                     default:
-                        moveToSlide(Math.min(parseInt(key, 10) - 1, slides.length - 1));
                         break;
                 }
             };
@@ -714,7 +752,7 @@ export async function createSummarySlideshow() {
 
         const moveToSlide = (nextIndex) => {
             clearAutoPlayTimers();
-            setCurrentSlide(nextIndex);
+            setCurrentSlide(clampSlideIndex(nextIndex, slides.length));
         };
 
         const jumpToSlide = (nextIndex, label = '') => {
