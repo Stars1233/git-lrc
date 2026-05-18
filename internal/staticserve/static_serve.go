@@ -51,7 +51,11 @@ func RenderPreactHTML(data *result.HTMLTemplateData) (string, error) {
 func GetStaticHandler() http.Handler {
 	if dir := devStaticDir(); dir != "" {
 		_ = mime.AddExtensionType(".mjs", "application/javascript; charset=utf-8")
-		return http.FileServer(http.Dir(dir))
+		fs := http.FileServer(http.Dir(dir))
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "no-store")
+			fs.ServeHTTP(w, r)
+		})
 	}
 	return result.GetStaticHandler(staticFiles)
 }
