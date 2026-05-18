@@ -1,4 +1,4 @@
-.PHONY: build build-win build-all build-local build-local-test run run-fake-review bump release release-internal release-gh clean test testall test-pkg upload-secrets download-secrets security-govulncheck security-govulncheck-json security-osv security-triage security-gitleaks security-b2-audit security-b2-cleanup-plan security-b2-cleanup-apply security-publish-release-manifest security-secret-regression security-sbom security-sbom-cyclonedx security-sbom-spdx security-sbom-validate release-notes-init release-notes-check release-preflight
+.PHONY: build build-win build-all build-local build-local-test run run-fake-review dev-ui bump release release-internal release-gh clean test testall test-pkg upload-secrets download-secrets security-govulncheck security-govulncheck-json security-osv security-triage security-gitleaks security-b2-audit security-b2-cleanup-plan security-b2-cleanup-apply security-publish-release-manifest security-secret-regression security-sbom security-sbom-cyclonedx security-sbom-spdx security-sbom-validate release-notes-init release-notes-check release-preflight
 
 # Go parameters
 GOENV=env -u GOROOT
@@ -69,6 +69,14 @@ run: build-local
 # Run fake review flow using fake-review build (defaults: WAIT=30s, TMP_REPO=/tmp/lrc-fake-review-repo)
 run-fake-review: build-local-test
 	@WAIT=$${WAIT:-30s} TMP_REPO=$${TMP_REPO:-/tmp/lrc-fake-review-repo} scripts/fake_review.sh $(ARGS)
+
+# Run fake review with live JS reloading — edit files in internal/staticserve/static/, refresh browser
+# No rebuild needed after JS changes: just edit and refresh the browser tab.
+dev-ui: build-local-test
+	@LRC_STATIC_DEV_DIR=$(CURDIR)/internal/staticserve/static \
+	 WAIT=$${WAIT:-5s} \
+	 TMP_REPO=$${TMP_REPO:-/tmp/lrc-fake-review-repo} \
+	 scripts/fake_review.sh $(ARGS)
 
 # Bump lrc version by editing appVersion in main.go
 # Prompts for version bump type (patch/minor/major)
