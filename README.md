@@ -47,7 +47,9 @@ https://github.com/user-attachments/assets/cc4aa598-a7e3-4a1d-998c-9f2ba4b4c66e
 - 🤖 **AI agents silently break things.** Code removed. Logic changed. Edge cases gone. You won't notice until production.
 - 🔍 **Catch it before it ships.** AI-powered inline comments show you _exactly_ what changed and what looks wrong.
 - 🔁 **Build a habit, ship better code.** Regular review → fewer bugs → more robust code → better results in your team.
-- 🔗 **Why git?** Git is universal. Every editor, every IDE, every AI toolkit uses it. Committing is mandatory. So there's _almost no chance of missing a review_ — regardless of your stack.
+- ⏰ **Why not wait for a PR?** By PR time, the faulty code is already committed, pushed, and visible. That is too late for issues you could have fixed yourself while the change was still fresh, without pulling team attention into avoidable cleanup.
+- 🧩 **Why not rely on IDE extensions?** Extensions are convenience, not a universal trigger. An engineer may choose to run them or not run them, and teams do not share one editor.
+- 🔗 **Why commit?** Commit is the sweet spot: early enough to catch problems before they enter permanent git history, but not so early that review depends on individual discretion or special tooling.
 
 ## Get Started
 
@@ -259,6 +261,18 @@ By default, the **first connector in the list** is used for reviews.
 **Vouch** means you're _explicitly taking responsibility_ for this commit. Typically used after multiple review iterations — you've gone back and forth, fixed issues, and are now satisfied. The AI doesn't run again, but your prior iteration and coverage stats are recorded.
 
 **Skip** means you're not reviewing this particular commit. Maybe it's trivial, maybe it's not critical — the reason is yours. The git log simply records `skipped`.
+
+### Why not review in a PR?
+
+Because that is already late. If a bug or low-value mistake survives until PR review, you have already committed it, pushed it, and asked teammates to look at something you could have corrected yourself earlier. That leaves a record of faulty code and draws shared attention to avoidable cleanup. git-lrc moves that feedback to commit-time, when context is still fresh and fixes are still cheap.
+
+### Why not review using IDE extensions?
+
+IDE extensions help, but they are not a reliable enforcement point. A developer can skip them, disable them, or use another editor entirely. That makes them useful convenience tooling, not a universal review trigger.
+
+### Why is commit the sweet spot?
+
+Commit-time is early enough to stop faulty code before it becomes part of permanent git history, but late enough to be dependable because every engineer has to commit. It gives you a reliable checkpoint without forcing one IDE, one AI assistant, or extra manual discipline.
 
 ### How is this free?
 
