@@ -206,6 +206,10 @@ export async function createFeedbackPopup() {
                 }
                 // switching from downvote — retract it
                 if (vote === 'down') retractStoredFeedback(visibilityKey);
+                if (!_impactStats) {
+                    const { reviewID } = getReviewMeta();
+                    fetchImpactStats(reviewID, data => setImpactStats(data));
+                }
                 if (onVote) onVote(visibilityKey, 'up');
                 postFeedback();
                 cancelHoverClose();
