@@ -483,6 +483,7 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 		}
 
 		serveURL := fmt.Sprintf("http://localhost:%d/?r=%s", opts.Port, url.QueryEscape(reviewID))
+		reviewMetadata = append(reviewMetadata, fmt.Sprintf("Local review: %s", serveURL))
 		if !useInteractive {
 			fmt.Printf("\n🌐 Review available at: %s\n", highlightURL(serveURL))
 			fmt.Printf("   Comments will appear progressively as review runs\n\n")
