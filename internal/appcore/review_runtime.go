@@ -117,11 +117,14 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 	// vs a pre-commit review (reviewing staged changes before commit, can commit from UI)
 	// When --commit flag is used, we're always reviewing historical commits (read-only mode)
 	isPostCommitReview := opts.DiffSource == "commit"
+	useBlockingReview := opts.BlockingReview && !isPostCommitReview
+	deferCommit := opts.Precommit || useBlockingReview
 
 	// Interactive flow (Web UI with commit actions) is the default when --serve is enabled
 	// BUT: disable interactive actions when reviewing historical commits (isPostCommitReview)
 	// Skip interactive mode if explicitly using --skip, not serving, or reviewing history
-	useInteractive := !opts.Skip && opts.Serve && !isPostCommitReview
+	useInteractive := !useBlockingReview && !opts.Skip && opts.Serve && !isPostCommitReview
+	useDecisionUI := !opts.Skip && opts.Serve && !isPostCommitReview
 
 	// Short-circuit skip: collect diff for coverage tracking, write attestation, exit
 	if opts.Skip {
@@ -196,10 +199,10 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 		return nil
 	}
 
-	if opts.Precommit {
+	if deferCommit {
 		gitDir, err := reviewapi.ResolveGitDir()
 		if err != nil {
-			return fmt.Errorf("precommit mode requires a git repository: %w", err)
+			return fmt.Errorf("blocking review requires a git repository: %w", err)
 		}
 		commitMsgPath = filepath.Join(gitDir, commitMessageFile)
 		_ = clearCommitMessageFile(commitMsgPath)
@@ -354,7 +357,7 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 			submissionFailed = true
 			submissionBlockedReason = "Usage quota exceeded"
 			var upgradeURL string
-			
+
 			// Try to parse structured error payload for a better message
 			var payload reviewmodel.APIErrorPayload
 			if jErr := json.Unmarshal([]byte(apiErr.Body), &payload); jErr == nil && payload.Error != "" {
@@ -431,14 +434,15 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 	// Recalculate useInteractive now that opts.Serve may have been auto-enabled
 	// This is critical for Case 1 (hook-based terminal invocation) where serve is auto-enabled
 	// and we need the interactive flow with commit/push/skip options
-	useInteractive = !opts.Skip && opts.Serve && !isPostCommitReview
+	useInteractive = !useBlockingReview && !opts.Skip && opts.Serve && !isPostCommitReview
+	useDecisionUI = !opts.Skip && opts.Serve && !isPostCommitReview
 	reviewMetadata := buildDecisionMetadata(reviewID, submitResp.UserEmail, submitResp.FriendlyName, reviewURL)
 	var runningDraftHub *draftHub
-	if useInteractive {
+	if useDecisionUI {
 		runningDraftHub = newDraftHub(initialMsg)
 	}
 
-	if !useInteractive && !submissionFailed {
+	if !useDecisionUI && !submissionFailed {
 		fmt.Printf("Review submitted, ID: %s\n", reviewID)
 		if submitResp.UserEmail != "" {
 			fmt.Printf("Account: %s\n", submitResp.UserEmail)
@@ -463,7 +467,7 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 
 		// Initialize global review state for API-based UI
 		reviewStateMu.Lock()
-		currentReviewState = NewReviewState(reviewID, filesFromDiff, useInteractive, isPostCommitReview, initialMsg, config.APIURL)
+		currentReviewState = NewReviewState(reviewID, filesFromDiff, useDecisionUI, isPostCommitReview, initialMsg, config.APIURL)
 		if submissionFailed {
 			currentReviewState.Status = "failed"
 			currentReviewState.ErrorSummary = submissionBlockedReason
@@ -482,7 +486,10 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 		}
 
 		serveURL := fmt.Sprintf("http://localhost:%d", opts.Port)
-		if !useInteractive {
+		if useBlockingReview {
+			fmt.Printf("\n🌐 Blocking review available at: %s\n", highlightURL(serveURL))
+			fmt.Printf("   Waiting for a browser decision before the caller can continue\n\n")
+		} else if !useDecisionUI {
 			fmt.Printf("\n🌐 Review available at: %s\n", highlightURL(serveURL))
 			fmt.Printf("   Comments will appear progressively as review runs\n\n")
 		}
@@ -1019,7 +1026,7 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 							message = initialMsg
 						}
 						return executeDecision(decisionCode, message, decisionPush, decisionExecutionContext{
-							precommit:          opts.Precommit,
+							deferCommit:        deferCommit,
 							verbose:            verbose,
 							initialMsg:         initialMsg,
 							commitMsgPath:      commitMsgPath,
@@ -1088,7 +1095,7 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 				message = initialMsg
 			}
 			return executeDecision(decisionCode, message, decisionPush, decisionExecutionContext{
-				precommit:          opts.Precommit,
+				deferCommit:        deferCommit,
 				verbose:            verbose,
 				initialMsg:         initialMsg,
 				commitMsgPath:      commitMsgPath,
@@ -1096,6 +1103,109 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 				reviewID:           reviewID,
 				attestationWritten: &attestationWritten,
 			})
+		}
+	}
+
+	if useBlockingReview {
+		if submissionFailed || reviewID == "" {
+			if submissionBlockedReason != "" {
+				return cli.Exit(submissionBlockedReason, 1)
+			}
+			return cli.Exit("LiveReview: blocking review could not start", 1)
+		}
+
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+		defer signal.Stop(sigChan)
+
+		if progressiveSubmit != nil {
+			go func() {
+				<-sigChan
+				progressiveSubmit(decisionruntime.SourceSignal, decisionflow.DecisionAbort, "", false)
+			}()
+		}
+
+		var pollResult *reviewmodel.DiffReviewResponse
+		var pollErr error
+		var pollUpdatedConfig Config
+		pollUsedRecovery := false
+		pollDone := make(chan struct{})
+		stopPoll := make(chan struct{})
+		var stopPollOnce sync.Once
+		stopPollFn := func() { stopPollOnce.Do(func() { close(stopPoll) }) }
+
+		go func() {
+			defer close(pollDone)
+			if fakeMode {
+				pollResult, pollErr = pollReviewFake(reviewID, opts.PollInterval, fakeWait, verbose, stopPoll, fakeBaseFiles, nil)
+			} else {
+				pollUsedRecovery = true
+				pollResult, pollUpdatedConfig, pollErr = pollReviewWithRecovery(*config, reviewID, opts.PollInterval, opts.Timeout, verbose, stopPoll, nil)
+			}
+		}()
+
+		for {
+			select {
+			case decision := <-progressiveDecisionChan:
+				stopPollFn()
+				<-pollDone
+				if pollUsedRecovery {
+					config = &pollUpdatedConfig
+				}
+				if pollErr != nil && !errors.Is(pollErr, reviewapi.ErrPollCancelled) {
+					return fmt.Errorf("failed to stop review polling cleanly: %w", pollErr)
+				}
+				return executeDecision(decision.code, decision.message, decision.push, decisionExecutionContext{
+					deferCommit:        true,
+					verbose:            verbose,
+					initialMsg:         initialMsg,
+					commitMsgPath:      commitMsgPath,
+					diffContent:        diffContent,
+					reviewID:           reviewID,
+					attestationWritten: &attestationWritten,
+				})
+			case <-pollDone:
+				if pollUsedRecovery {
+					config = &pollUpdatedConfig
+				}
+				progressiveRuntime.SetPhase(decisionflow.PhaseReviewComplete)
+				if pollErr != nil {
+					reviewStateMu.Lock()
+					if currentReviewState != nil {
+						currentReviewState.SetFailed(pollErr.Error())
+					}
+					reviewStateMu.Unlock()
+					var apiErr *reviewmodel.APIError
+					if errors.As(pollErr, &apiErr) && apiErr.StatusCode == http.StatusUnauthorized {
+						return liveReviewAuthFailureError(config.APIURL, formatLiveReviewTechnicalDetails(apiErr.Body))
+					}
+					if reviewURL != "" {
+						return fmt.Errorf("failed to poll review (see %s): %w", reviewURL, pollErr)
+					}
+					return fmt.Errorf("failed to poll review: %w", pollErr)
+				}
+				result = pollResult
+				reviewStateMu.Lock()
+				if currentReviewState != nil && pollResult != nil {
+					currentReviewState.UpdateFromResult(pollResult)
+				}
+				reviewStateMu.Unlock()
+				attestationAction = "reviewed"
+				if err := recordCoverageAndAttest("reviewed", diffContent, reviewID, verbose, &attestationWritten); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+				}
+				fmt.Printf("Review complete. Choose commit, commit-push, skip, vouch, or abort in the browser.\n")
+				decision := <-progressiveDecisionChan
+				return executeDecision(decision.code, decision.message, decision.push, decisionExecutionContext{
+					deferCommit:        true,
+					verbose:            verbose,
+					initialMsg:         initialMsg,
+					commitMsgPath:      commitMsgPath,
+					diffContent:        diffContent,
+					reviewID:           reviewID,
+					attestationWritten: &attestationWritten,
+				})
+			}
 		}
 	}
 
@@ -1254,7 +1364,7 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 				stopTUI()
 				<-tuiDone
 				return executeDecision(decision.code, decision.message, decision.push, decisionExecutionContext{
-					precommit:          opts.Precommit,
+					deferCommit:        deferCommit,
 					verbose:            verbose,
 					initialMsg:         initialMsg,
 					commitMsgPath:      commitMsgPath,
@@ -1305,7 +1415,7 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 
 				// Non-hook interactive: execute commit (and optional push) directly
 				return executeDecision(code, msg, push, decisionExecutionContext{
-					precommit:          false,
+					deferCommit:        deferCommit,
 					verbose:            verbose,
 					initialMsg:         initialMsg,
 					commitMsgPath:      commitMsgPath,
@@ -1340,7 +1450,7 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 	}
 
 	// Render result to stdout (skip in interactive mode or when serving - handled by UI)
-	if !useInteractive && !opts.Serve {
+	if !useDecisionUI && !opts.Serve {
 		if err := renderResult(result, opts.Output); err != nil {
 			return fmt.Errorf("failed to render result: %w", err)
 		}

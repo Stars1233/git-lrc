@@ -18,28 +18,29 @@ const (
 )
 
 type Options struct {
-	RepoName     string
-	DiffSource   string
-	RangeVal     string
-	CommitVal    string
-	DiffFile     string
-	APIURL       string
-	APIKey       string
-	PollInterval time.Duration
-	Timeout      time.Duration
-	Output       string
-	SaveBundle   string
-	SaveJSON     string
-	SaveText     string
-	SaveHTML     string
-	Serve        bool
-	Port         int
-	Verbose      bool
-	Precommit    bool
-	Skip         bool
-	Force        bool
-	Vouch        bool
-	InitialMsg   string
+	RepoName       string
+	DiffSource     string
+	RangeVal       string
+	CommitVal      string
+	DiffFile       string
+	APIURL         string
+	APIKey         string
+	PollInterval   time.Duration
+	Timeout        time.Duration
+	Output         string
+	SaveBundle     string
+	SaveJSON       string
+	SaveText       string
+	SaveHTML       string
+	Serve          bool
+	Port           int
+	Verbose        bool
+	Precommit      bool
+	BlockingReview bool
+	Skip           bool
+	Force          bool
+	Vouch          bool
+	InitialMsg     string
 }
 
 func BuildFromContext(c *cli.Context, includeDebug bool) (Options, error) {
@@ -53,24 +54,25 @@ func BuildFromContext(c *cli.Context, includeDebug bool) (Options, error) {
 	}
 
 	opts := Options{
-		RepoName:   c.String("repo-name"),
-		RangeVal:   c.String("range"),
-		CommitVal:  c.String("commit"),
-		DiffFile:   c.String("diff-file"),
-		APIURL:     c.String("api-url"),
-		APIKey:     c.String("api-key"),
-		Output:     c.String("output"),
-		SaveHTML:   c.String("save-html"),
-		Serve:      c.Bool("serve"),
-		Port:       c.Int("port"),
-		Verbose:    c.Bool("verbose"),
-		Precommit:  c.Bool("precommit"),
-		Skip:       c.Bool("skip"),
-		Force:      c.Bool("force"),
-		Vouch:      c.Bool("vouch"),
-		SaveJSON:   c.String("save-json"),
-		SaveText:   c.String("save-text"),
-		InitialMsg: initialMsg,
+		RepoName:       c.String("repo-name"),
+		RangeVal:       c.String("range"),
+		CommitVal:      c.String("commit"),
+		DiffFile:       c.String("diff-file"),
+		APIURL:         c.String("api-url"),
+		APIKey:         c.String("api-key"),
+		Output:         c.String("output"),
+		SaveHTML:       c.String("save-html"),
+		Serve:          c.Bool("serve"),
+		Port:           c.Int("port"),
+		Verbose:        c.Bool("verbose"),
+		Precommit:      c.Bool("precommit"),
+		BlockingReview: c.Bool("blocking-review"),
+		Skip:           c.Bool("skip"),
+		Force:          c.Bool("force"),
+		Vouch:          c.Bool("vouch"),
+		SaveJSON:       c.String("save-json"),
+		SaveText:       c.String("save-text"),
+		InitialMsg:     initialMsg,
 	}
 
 	if opts.Skip || opts.Vouch {
@@ -79,6 +81,17 @@ func BuildFromContext(c *cli.Context, includeDebug bool) (Options, error) {
 	if opts.Skip && opts.Vouch {
 		return Options{}, fmt.Errorf("cannot use --skip and --vouch together")
 	}
+	if opts.BlockingReview {
+		if opts.Precommit {
+			return Options{}, fmt.Errorf("cannot use --blocking-review and --precommit together")
+		}
+		if opts.Skip {
+			return Options{}, fmt.Errorf("cannot use --blocking-review and --skip together")
+		}
+		if opts.Vouch {
+			return Options{}, fmt.Errorf("cannot use --blocking-review and --vouch together")
+		}
+	}
 
 	staged := c.Bool("staged")
 	diffSource := c.String("diff-source")
@@ -86,6 +99,9 @@ func BuildFromContext(c *cli.Context, includeDebug bool) (Options, error) {
 	if opts.DiffFile != "" {
 		diffSource = "file"
 	} else if opts.CommitVal != "" {
+		if opts.BlockingReview {
+			return Options{}, fmt.Errorf("cannot use --blocking-review with --commit reviews")
+		}
 		diffSource = "commit"
 		opts.Precommit = false
 		opts.Skip = false
@@ -103,6 +119,9 @@ func BuildFromContext(c *cli.Context, includeDebug bool) (Options, error) {
 	}
 
 	opts.DiffSource = diffSource
+	if opts.BlockingReview {
+		opts.Serve = true
+	}
 
 	if includeDebug {
 		opts.PollInterval = c.Duration("poll-interval")

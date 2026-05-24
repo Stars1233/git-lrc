@@ -37,6 +37,7 @@ var baseFlags = []cli.Flag{
 	&cli.IntFlag{Name: "port", Usage: "port for HTTP server (used with --serve)", Value: 8000, EnvVars: []string{"LRC_PORT"}},
 	&cli.BoolFlag{Name: "verbose", Usage: "enable verbose output", EnvVars: []string{"LRC_VERBOSE"}},
 	&cli.BoolFlag{Name: "precommit", Usage: "pre-commit mode: interactive prompts for commit decision (Ctrl-C=abort, Ctrl-S=skip+commit, Ctrl-V=vouch+commit, Enter=commit)", Value: false, EnvVars: []string{"LRC_PRECOMMIT"}},
+	&cli.BoolFlag{Name: "blocking-review", Usage: "launch the decision-capable web review UI and block until a proceed or abort decision is made", EnvVars: []string{"LRC_BLOCKING_REVIEW"}},
 	&cli.BoolFlag{Name: "skip", Usage: "mark review as skipped and write attestation without contacting the API", EnvVars: []string{"LRC_SKIP"}},
 	&cli.BoolFlag{Name: "force", Usage: "force rerun by removing existing attestation/hash for current tree", EnvVars: []string{"LRC_FORCE"}},
 	&cli.BoolFlag{Name: "vouch", Usage: "vouch for changes manually without running AI review (records attestation with coverage stats from prior iterations)", EnvVars: []string{"LRC_VOUCH"}},
