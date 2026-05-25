@@ -488,7 +488,7 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 
 		// Initialize global review state for API-based UI
 		reviewStateMu.Lock()
-		currentReviewState = NewReviewState(reviewID, filesFromDiff, useInteractive, isPostCommitReview, initialMsg, config.APIURL)
+		currentReviewState = NewReviewState(reviewID, filesFromDiff, useDecisionUI, isPostCommitReview, initialMsg, config.APIURL)
 		if submitResp.FriendlyName != "" {
 			currentReviewState.FriendlyName = submitResp.FriendlyName
 		}
@@ -1211,9 +1211,6 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 				if pollUsedRecovery {
 					config = &pollUpdatedConfig
 				}
-				if pollErr != nil && !errors.Is(pollErr, reviewapi.ErrPollCancelled) {
-					return fmt.Errorf("failed to stop review polling cleanly: %w", pollErr)
-				}
 				return executeDecision(decision.code, decision.message, decision.push, decisionExecutionContext{
 					deferCommit:        true,
 					verbose:            verbose,
@@ -1227,7 +1224,6 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 				if pollUsedRecovery {
 					config = &pollUpdatedConfig
 				}
-				progressiveRuntime.SetPhase(decisionflow.PhaseReviewComplete)
 				if pollErr != nil {
 					reviewStateMu.Lock()
 					if currentReviewState != nil {
@@ -1236,13 +1232,22 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 					reviewStateMu.Unlock()
 					var apiErr *reviewmodel.APIError
 					if errors.As(pollErr, &apiErr) && apiErr.StatusCode == http.StatusUnauthorized {
-						return liveReviewAuthFailureError(config.APIURL, formatLiveReviewTechnicalDetails(apiErr.Body))
+						fmt.Fprintf(os.Stderr, "\n⚠️  LiveReview authentication failed for review updates.\n")
+						fmt.Fprintf(os.Stderr, "   Run: lrc ui\n")
+						fmt.Fprintf(os.Stderr, "   Login or re-authenticate, then retry: git lrc\n")
+						fmt.Fprintf(os.Stderr, "   This is LiveReview review-submission authentication, not your AI connector provider key.\n")
+						fmt.Fprintf(os.Stderr, "\nTechnical details:\n%s\n\n", formatLiveReviewTechnicalDetails(apiErr.Body))
+					} else if reviewURL != "" {
+						fmt.Fprintf(os.Stderr, "\n⚠️  Review failed: %v\n", pollErr)
+						fmt.Fprintf(os.Stderr, "   Review details remain available at: %s\n", reviewURL)
+					} else {
+						fmt.Fprintf(os.Stderr, "\n⚠️  Review failed: %v\n", pollErr)
 					}
-					if reviewURL != "" {
-						return fmt.Errorf("failed to poll review (see %s): %w", reviewURL, pollErr)
-					}
-					return fmt.Errorf("failed to poll review: %w", pollErr)
+					fmt.Fprintf(os.Stderr, "   Choose Skip, Vouch, or Abort in the browser before %s elapses.\n\n", blockingTimeout)
+					pollDone = nil
+					continue
 				}
+				progressiveRuntime.SetPhase(decisionflow.PhaseReviewComplete)
 				result = pollResult
 				reviewStateMu.Lock()
 				if currentReviewState != nil && pollResult != nil {
@@ -1299,7 +1304,7 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 	// Skip if progressive loading is active - the browser already has the skeleton HTML
 	// and will receive error/completion via the events API
 	if htmlPath := opts.SaveHTML; htmlPath != "" && !progressiveLoadingActive {
-		if err := saveHTMLOutput(htmlPath, result, verbose, useInteractive, isPostCommitReview, initialMsg, reviewID, config.APIURL, config.APIKey); err != nil {
+		if err := saveHTMLOutput(htmlPath, result, verbose, useDecisionUI, isPostCommitReview, initialMsg, reviewID, config.APIURL, config.APIKey); err != nil {
 			return fmt.Errorf("failed to save HTML output: %w", err)
 		}
 
