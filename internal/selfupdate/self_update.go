@@ -517,7 +517,7 @@ func downloadVersionBinaryFromManifest(versionTag string) (string, error) {
 		binaryName = "lrc.exe"
 	}
 
-	client := network.NewSelfUpdateClient(60 * time.Second)
+	client := network.NewSelfUpdateClient(120 * time.Second)
 	manifest, err := fetchReleaseManifest(client)
 	if err != nil {
 		return "", err
