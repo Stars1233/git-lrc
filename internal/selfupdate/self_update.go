@@ -26,6 +26,7 @@ import (
 	"github.com/HexmosTech/git-lrc/storage"
 	"github.com/gofrs/flock"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/term"
 )
 
 // version is injected by main at startup so update checks compare against the
@@ -118,7 +119,7 @@ func fetchReleaseManifest(client *network.Client) (*network.ReleaseManifest, err
 }
 
 func fetchLatestVersionFromManifest() (string, error) {
-	client := network.NewSelfUpdateClient(30 * time.Second)
+	client := network.NewSelfUpdateClient()
 	manifest, err := fetchReleaseManifest(client)
 	if err != nil {
 		return "", err
@@ -517,7 +518,7 @@ func downloadVersionBinaryFromManifest(versionTag string) (string, error) {
 		binaryName = "lrc.exe"
 	}
 
-	client := network.NewSelfUpdateClient(60 * time.Second)
+	client := network.NewSelfUpdateClient()
 	manifest, err := fetchReleaseManifest(client)
 	if err != nil {
 		return "", err
@@ -546,7 +547,42 @@ func downloadVersionBinaryFromManifest(versionTag string) (string, error) {
 	}
 	tmpPath := tmpFile.Name()
 
-	statusCode, err := network.SelfUpdateDownloadBinaryTo(client, fullURL, tmpFile)
+	isTTY := term.IsTerminal(int(os.Stdout.Fd()))
+	if !isTTY {
+		fmt.Printf("Downloading lrc %s ...\n", versionTag)
+	}
+	startTime := time.Now()
+	statusCode, err := network.SelfUpdateDownloadBinaryTo(client, fullURL, tmpFile, func(downloaded, total int64) {
+		if !isTTY {
+			return
+		}
+		elapsed := time.Since(startTime).Seconds()
+		if elapsed < 0.001 {
+			elapsed = 0.001
+		}
+		speedBps := float64(downloaded) / elapsed
+		speedMBps := speedBps / (1024 * 1024)
+		if total > 0 {
+			pct := float64(downloaded) * 100.0 / float64(total)
+			var etaStr string
+			if speedBps > 0 {
+				etaSecs := int(float64(total-downloaded) / speedBps)
+				if etaSecs < 60 {
+					etaStr = fmt.Sprintf("%ds", etaSecs)
+				} else {
+					etaStr = fmt.Sprintf("%dm%ds", etaSecs/60, etaSecs%60)
+				}
+			} else {
+				etaStr = "?"
+			}
+			fmt.Printf("\rDownloading lrc %s ... %.1f%% | %.1f MB/s | ETA %-6s", versionTag, pct, speedMBps, etaStr)
+		} else {
+			fmt.Printf("\rDownloading lrc %s ... %.1f MB/s | %d KB downloaded", versionTag, speedMBps, downloaded/1024)
+		}
+	})
+	if isTTY {
+		fmt.Println()
+	}
 	if err != nil {
 		_ = tmpFile.Close()
 		_ = storage.Remove(tmpPath)

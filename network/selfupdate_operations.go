@@ -41,8 +41,25 @@ func SelfUpdateFetchReleaseManifest(client *Client, fullURL string) (*Response, 
 	return client.DoJSON(http.MethodGet, fullURL, nil, "", "", nil)
 }
 
+// progressWriter wraps an io.Writer and calls onProgress after each write.
+type progressWriter struct {
+	dst        io.Writer
+	total      int64
+	downloaded int64
+	onProgress func(downloaded, total int64)
+}
+
+func (pw *progressWriter) Write(p []byte) (int, error) {
+	n, err := pw.dst.Write(p)
+	pw.downloaded += int64(n)
+	pw.onProgress(pw.downloaded, pw.total)
+	return n, err
+}
+
 // SelfUpdateDownloadBinaryTo streams a self-update binary into dst.
-func SelfUpdateDownloadBinaryTo(client *Client, fullURL string, dst io.Writer) (int, error) {
+// onProgress is called after each chunk with (downloaded, total) byte counts;
+// total is -1 when the server does not send Content-Length.
+func SelfUpdateDownloadBinaryTo(client *Client, fullURL string, dst io.Writer, onProgress func(downloaded, total int64)) (int, error) {
 	if err := validateSelfUpdateURL(fullURL); err != nil {
 		return 0, err
 	}
@@ -58,7 +75,8 @@ func SelfUpdateDownloadBinaryTo(client *Client, fullURL string, dst io.Writer) (
 	}
 	defer resp.Body.Close()
 
-	if _, err := io.Copy(dst, resp.Body); err != nil {
+	pw := &progressWriter{dst: dst, total: resp.ContentLength, onProgress: onProgress}
+	if _, err := io.Copy(pw, resp.Body); err != nil {
 		return resp.StatusCode, fmt.Errorf("failed to stream self-update body: %w", err)
 	}
 
