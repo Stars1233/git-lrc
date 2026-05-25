@@ -64,7 +64,7 @@ This document tracks network-side operations in git-lrc as an auditable inventor
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | SelfUpdateFetchManifest | api | Update manifest metadata and checksum references | Retrieve global update manifest | Medium | Medium integrity risk if manifest source is untrusted | Compensated by controlled update source design and follow-on verification path; acceptable risk | [network/selfupdate_operations.go](selfupdate_operations.go#L32) |
 | SelfUpdateFetchReleaseManifest | api | Platform-specific release manifest | Retrieve release details for current target platform | Medium | Medium integrity risk from release metadata tampering | Compensated by expected-host model and verification pipeline assumptions; acceptable risk | [network/selfupdate_operations.go](selfupdate_operations.go#L37) |
-| SelfUpdateDownloadBinaryTo | api | Binary stream bytes for executable update artifact | Download release binary to target path | High | High integrity and supply-chain risk for executable download | Compensated by source host validation and SHA256 verification during staging in internal/selfupdate downloadVersionBinaryFromManifest; residual risk acceptable | [network/selfupdate_operations.go](selfupdate_operations.go#L45) |
+| SelfUpdateDownloadBinaryTo | api | Binary stream bytes for executable update artifact | Download release binary to target path | High | High integrity and supply-chain risk for executable download | Compensated by source host validation and SHA256 verification during staging in internal/selfupdate downloadVersionBinaryFromManifest; residual risk acceptable | [network/selfupdate_operations.go](selfupdate_operations.go#L62) |
 
 ## Inventory: HTTP Transport And Error Handling Utilities
 
