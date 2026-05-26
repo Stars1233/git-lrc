@@ -27,8 +27,12 @@ func currentLocalHooksPath(repoRoot string) (string, error) {
 	return hooksvc.CurrentLocalHooksPath(repoRoot)
 }
 
-func resolveRepoHooksPath(repoRoot string) (string, error) {
-	return hooksvc.ResolveRepoHooksPath(repoRoot)
+func resolveRepoHooksPath(repoRoot, gitCommonDir string) (string, error) {
+	return hooksvc.ResolveRepoHooksPath(repoRoot, gitCommonDir)
+}
+
+func resolveEffectiveHooksPath(repoRoot, gitCommonDir string) (string, error) {
+	return hooksvc.ResolveEffectiveHooksPath(repoRoot, gitCommonDir)
 }
 
 func setGlobalHooksPath(path string) error {
@@ -65,6 +69,25 @@ func writeManagedHookScripts(dir string) error {
 	})
 }
 
+func resolveRepoContext() (repoRoot, gitDir, gitCommonDir string, err error) {
+	repoRoot, err = reviewapi.ResolveRepoRoot()
+	if err != nil {
+		return "", "", "", err
+	}
+
+	gitDir, err = reviewapi.ResolveGitDir()
+	if err != nil {
+		return "", "", "", err
+	}
+
+	gitCommonDir, err = reviewapi.ResolveGitCommonDir()
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return repoRoot, gitDir, gitCommonDir, nil
+}
+
 // runHooksInstall installs dispatchers and managed hook scripts under either global core.hooksPath or the current repo hooks path when --local is used
 func runHooksInstall(c *cli.Context) error {
 	localInstall := c.Bool("local")
@@ -78,12 +101,11 @@ func runHooksInstall(c *cli.Context) error {
 			return fmt.Errorf("not in a git repository (no .git directory found)")
 		}
 
-		gitDir, err := reviewapi.ResolveGitDir()
+		repoRoot, _, gitCommonDir, err := resolveRepoContext()
 		if err != nil {
 			return err
 		}
-		repoRoot := filepath.Dir(gitDir)
-		hooksPath, err = resolveRepoHooksPath(repoRoot)
+		hooksPath, err = resolveRepoHooksPath(repoRoot, gitCommonDir)
 		if err != nil {
 			return err
 		}
@@ -172,12 +194,11 @@ func runHooksUninstall(c *cli.Context) error {
 		if !isGitRepository() {
 			return fmt.Errorf("not in a git repository (no .git directory found)")
 		}
-		gitDir, err := reviewapi.ResolveGitDir()
+		repoRoot, _, gitCommonDir, err := resolveRepoContext()
 		if err != nil {
 			return err
 		}
-		repoRoot := filepath.Dir(gitDir)
-		hooksPath, err = resolveRepoHooksPath(repoRoot)
+		hooksPath, err = resolveRepoHooksPath(repoRoot, gitCommonDir)
 		if err != nil {
 			return err
 		}
@@ -323,34 +344,46 @@ func hookHasManagedSection(path string) bool {
 }
 
 func runHooksStatus(c *cli.Context) error {
-	hooksPath, _ := currentHooksPath()
+	globalHooksPath, _ := currentHooksPath()
 	defaultPath, _ := defaultGlobalHooksPath()
-	if hooksPath == "" {
-		hooksPath = defaultPath
-	}
 
-	absHooksPath, err := filepath.Abs(hooksPath)
-	if err != nil {
-		return fmt.Errorf("failed to resolve hooks path: %w", err)
-	}
-
-	gitDir, gitErr := reviewapi.ResolveGitDir()
+	repoRoot, gitDir, gitCommonDir, gitErr := resolveRepoContext()
 	repoDisabled := false
 	if gitErr == nil {
 		repoDisabled = fileExists(filepath.Join(gitDir, "lrc", "disabled"))
 	}
 
+	hooksPath := globalHooksPath
+	if gitErr == nil {
+		var err error
+		hooksPath, err = resolveEffectiveHooksPath(repoRoot, gitCommonDir)
+		if err != nil {
+			return err
+		}
+	} else if hooksPath == "" {
+		hooksPath = defaultPath
+	}
+
+	absHooksPath, err := hooksvc.NormalizeHooksPath(hooksPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve hooks path: %w", err)
+	}
+
 	fmt.Printf("hooksPath: %s\n", absHooksPath)
-	if cfg, _ := currentHooksPath(); cfg != "" {
-		fmt.Printf("core.hooksPath: %s\n", cfg)
+	if localCfg, _ := currentLocalHooksPath(repoRoot); gitErr == nil && localCfg != "" {
+		fmt.Printf("repo core.hooksPath: %s\n", localCfg)
+	}
+	if globalHooksPath != "" {
+		fmt.Printf("global core.hooksPath: %s\n", globalHooksPath)
 	} else {
-		fmt.Println("core.hooksPath: not set (using repo default unless dispatcher present)")
+		fmt.Println("global core.hooksPath: not set")
 	}
 
 	if gitErr == nil {
-		fmt.Printf("repo: %s\n", filepath.Dir(gitDir))
+		disabledPath := filepath.Join(gitDir, "lrc", "disabled")
+		fmt.Printf("repo: %s\n", repoRoot)
 		if repoDisabled {
-			fmt.Println("status: disabled via .git/lrc/disabled")
+			fmt.Printf("status: disabled via %s\n", disabledPath)
 		} else {
 			fmt.Println("status: enabled")
 		}
@@ -391,7 +424,10 @@ func uninstallHook(hookPath, hookName string) error {
 // installEditorWrapper sets core.editor to an lrc-managed wrapper that injects
 // the precommit-provided message when available and falls back to the user's editor.
 func installEditorWrapper(gitDir string) error {
-	repoRoot := filepath.Dir(gitDir)
+	repoRoot, err := reviewapi.ResolveRepoRoot()
+	if err != nil {
+		return fmt.Errorf("failed to resolve repository root: %w", err)
+	}
 	scriptPath := filepath.Join(gitDir, editorWrapperScript)
 	backupPath := filepath.Join(gitDir, editorBackupFile)
 
@@ -438,7 +474,10 @@ exec vi "$@"
 
 // uninstallEditorWrapper restores the previous editor (if backed up) and removes wrapper files.
 func uninstallEditorWrapper(gitDir string) error {
-	repoRoot := filepath.Dir(gitDir)
+	repoRoot, err := reviewapi.ResolveRepoRoot()
+	if err != nil {
+		return fmt.Errorf("failed to resolve repository root: %w", err)
+	}
 	scriptPath := filepath.Join(gitDir, editorWrapperScript)
 	backupPath := filepath.Join(gitDir, editorBackupFile)
 

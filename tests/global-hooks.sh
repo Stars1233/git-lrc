@@ -208,7 +208,7 @@ commit_exit=$?
 
 # The hook should have blocked with attestation message
 assert_contains "commit blocked with attestation message" \
-    "You are using LiveReview" "$commit_output"
+    "review attestation missing for staged changes" "$commit_output"
 
 # Verify nothing was committed (test.txt still staged, not committed)
 status_output="$(git status --porcelain)"

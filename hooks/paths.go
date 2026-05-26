@@ -48,15 +48,45 @@ func CurrentLocalHooksPath(repoRoot string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func ResolveRepoHooksPath(repoRoot string) (string, error) {
+func resolveConfiguredHooksPath(baseDir, configuredPath string) string {
+	if filepath.IsAbs(configuredPath) {
+		return configuredPath
+	}
+	return filepath.Join(baseDir, configuredPath)
+}
+
+func resolveRepoHooksPathValue(repoRoot, gitCommonDir, localPath string) (string, error) {
+	trimmedLocal := strings.TrimSpace(localPath)
+	if trimmedLocal != "" {
+		return resolveConfiguredHooksPath(repoRoot, trimmedLocal), nil
+	}
+	trimmedCommon := strings.TrimSpace(gitCommonDir)
+	if trimmedCommon == "" {
+		return "", fmt.Errorf("failed to resolve repo hooks path: empty git common dir")
+	}
+	return filepath.Join(trimmedCommon, "hooks"), nil
+}
+
+func resolveEffectiveHooksPathValue(repoRoot, gitCommonDir, localPath, globalPath string) (string, error) {
+	if path, err := resolveRepoHooksPathValue(repoRoot, gitCommonDir, localPath); err == nil && strings.TrimSpace(localPath) != "" {
+		return path, nil
+	}
+	trimmedGlobal := strings.TrimSpace(globalPath)
+	if trimmedGlobal != "" {
+		return trimmedGlobal, nil
+	}
+	return resolveRepoHooksPathValue(repoRoot, gitCommonDir, localPath)
+}
+
+func ResolveRepoHooksPath(repoRoot, gitCommonDir string) (string, error) {
 	localPath, _ := CurrentLocalHooksPath(repoRoot)
-	if localPath == "" {
-		return filepath.Join(repoRoot, ".git", "hooks"), nil
-	}
-	if filepath.IsAbs(localPath) {
-		return localPath, nil
-	}
-	return filepath.Join(repoRoot, localPath), nil
+	return resolveRepoHooksPathValue(repoRoot, gitCommonDir, localPath)
+}
+
+func ResolveEffectiveHooksPath(repoRoot, gitCommonDir string) (string, error) {
+	localPath, _ := CurrentLocalHooksPath(repoRoot)
+	globalPath, _ := CurrentHooksPath()
+	return resolveEffectiveHooksPathValue(repoRoot, gitCommonDir, localPath, globalPath)
 }
 
 func NormalizeHooksPath(path string) (string, error) {

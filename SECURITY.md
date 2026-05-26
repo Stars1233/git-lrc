@@ -9,7 +9,7 @@ This document answers security and procurement questions for git-lrc in concrete
 - Default behavior: git-lrc runs locally as a CLI.
 - Code leaves the machine only when you submit a review or run setup/update operations that call remote APIs.
 - Review submission sends staged diff bundle data to the configured LiveReview API.
-- Local files include configuration at ~/.lrc.toml and repository-local state under .git/lrc.
+- Local files include configuration at ~/.lrc.toml and repository-local state under $(git rev-parse --git-dir)/lrc.
 - Security scans: gitleaks, OSV scanner, govulncheck, and Semgrep run in GitHub Actions.
 - SBOM is generated and attached to release assets.
 
@@ -62,7 +62,7 @@ Configured API endpoint examples:
 | Data Type | Storage | Why |
 | --- | --- | --- |
 | API key and connector state | ~/.lrc.toml | CLI authentication and connector configuration |
-| Hook metadata and repo state | .git/lrc/* and managed hook paths | Hook install/uninstall and local review state |
+| Hook metadata and repo state | $(git rev-parse --git-dir)/lrc/* and managed hook paths | Hook install/uninstall and local review state |
 | Review session/attestation metadata | Local SQLite and local files | Local review traceability and workflow support |
 | Update lock and pending update state | Local update state files | Safe update staging and install flow |
 

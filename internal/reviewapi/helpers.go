@@ -39,21 +39,20 @@ func CurrentTreeHash() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// resolveGitDir returns the absolute path to the repository's .git directory.
-func ResolveGitDir() (string, error) {
-	cmd := exec.Command("git", "rev-parse", "--git-dir")
+func resolveGitPath(args ...string) (string, error) {
+	cmd := exec.Command("git", args...)
 	out, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to locate git directory: %w", err)
+		return "", fmt.Errorf("failed to resolve git path via %v: %w", args, err)
 	}
 
-	gitDir := strings.TrimSpace(string(out))
-	if gitDir == "" {
-		return "", fmt.Errorf("git directory path is empty")
+	gitPath := strings.TrimSpace(string(out))
+	if gitPath == "" {
+		return "", fmt.Errorf("git path is empty for %v", args)
 	}
 
-	if filepath.IsAbs(gitDir) {
-		return gitDir, nil
+	if filepath.IsAbs(gitPath) {
+		return gitPath, nil
 	}
 
 	cwd, err := os.Getwd()
@@ -61,7 +60,22 @@ func ResolveGitDir() (string, error) {
 		return "", fmt.Errorf("failed to resolve working directory: %w", err)
 	}
 
-	return filepath.Join(cwd, gitDir), nil
+	return filepath.Join(cwd, gitPath), nil
+}
+
+// ResolveGitDir returns the absolute path to the repository's git dir.
+func ResolveGitDir() (string, error) {
+	return resolveGitPath("rev-parse", "--git-dir")
+}
+
+// ResolveGitCommonDir returns the absolute path to the repository's shared git dir.
+func ResolveGitCommonDir() (string, error) {
+	return resolveGitPath("rev-parse", "--git-common-dir")
+}
+
+// ResolveRepoRoot returns the absolute path to the current repository worktree root.
+func ResolveRepoRoot() (string, error) {
+	return resolveGitPath("rev-parse", "--show-toplevel")
 }
 
 func CreateZipArchive(diffContent []byte) ([]byte, error) {

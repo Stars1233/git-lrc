@@ -2,11 +2,12 @@ __LRC_MARKER_BEGIN__
 # lrc_version: __LRC_VERSION__
 # This section is managed by LiveReview CLI (lrc)
 # Manual changes within markers will be lost on hook updates
-STATE_FILE=".git/livereview_state"
-LOCK_DIR=".git/livereview_state.lock"
 COMMIT_MSG_FILE="$1"
-COMMIT_MSG_OVERRIDE=".git/__LRC_COMMIT_MESSAGE_FILE__"
-LRC_DIR=".git/lrc"
+GIT_DIR="$(git rev-parse --git-dir 2>/dev/null || echo .git)"
+STATE_FILE="$GIT_DIR/livereview_state"
+LOCK_DIR="$GIT_DIR/livereview_state.lock"
+COMMIT_MSG_OVERRIDE="$GIT_DIR/__LRC_COMMIT_MESSAGE_FILE__"
+LRC_DIR="$GIT_DIR/lrc"
 ATTEST_DIR="$LRC_DIR/attestations"
 DISABLED_FILE="$LRC_DIR/disabled"
 
@@ -15,7 +16,6 @@ if [ -f "$DISABLED_FILE" ]; then
 fi
 
 # Skip during Git sequencer operations to avoid re-triggering on rebase/merge/cherry-pick
-GIT_DIR="$(git rev-parse --git-dir 2>/dev/null || echo .git)"
 if [ -d "$GIT_DIR/rebase-apply" ] || [ -d "$GIT_DIR/rebase-merge" ] || [ -f "$GIT_DIR/MERGE_HEAD" ] || [ -f "$GIT_DIR/CHERRY_PICK_HEAD" ]; then
 	echo "LiveReview: skipping during rebase/merge/cherry-pick" >&2
 	exit 0

@@ -20,12 +20,12 @@ Transmission behavior:
 Local persistence behavior:
 
 - Credentials and connector state are written to `~/.lrc.toml`
-- Hook/attestation artifacts are written under `.git/lrc/...`
+- Hook/attestation artifacts are written under the repository git dir at `$(git rev-parse --git-dir)/lrc/...`
 - Optional review artifacts are written only when you pass `--save-*` flags
 
 Retention and deletion:
 
-- Local files are user-controlled and can be deleted directly from `~/.lrc.toml`, `~/.lrc/update/*`, and `.git/lrc/*`
+- Local files are user-controlled and can be deleted directly from `~/.lrc.toml`, `~/.lrc/update/*`, and `$(git rev-parse --git-dir)/lrc/*`
 - Server-side retention/training policy is governed by LiveReview backend policy; the CLI does not independently retain uploaded diff payloads after submission
 
 ## Data Handling Boundaries

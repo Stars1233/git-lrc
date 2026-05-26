@@ -5,16 +5,19 @@ __LRC_MARKER_BEGIN__
 
 COMMIT_MSG_FILE="$1"
 SKIP_REVIEW="${LRC_SKIP_REVIEW:-}" 
-LRC_DIR=".git/lrc"
+GIT_DIR="$(git rev-parse --git-dir 2>/dev/null || echo .git)"
+LRC_DIR="$GIT_DIR/lrc"
 ATTEST_DIR="$LRC_DIR/attestations"
 DISABLED_FILE="$LRC_DIR/disabled"
+STATE_FILE="$GIT_DIR/livereview_state"
+LOCK_DIR="$GIT_DIR/livereview_state.lock"
+INITIAL_MSG_FILE="$GIT_DIR/livereview_initial_message.$$"
 
 if [ -f "$DISABLED_FILE" ]; then
 	exit 0
 fi
 
 # Skip during Git sequencer operations to avoid re-triggering on rebase/merge/cherry-pick
-GIT_DIR="$(git rev-parse --git-dir 2>/dev/null || echo .git)"
 if [ -d "$GIT_DIR/rebase-apply" ] || [ -d "$GIT_DIR/rebase-merge" ] || [ -f "$GIT_DIR/MERGE_HEAD" ] || [ -f "$GIT_DIR/CHERRY_PICK_HEAD" ]; then
 	echo "LiveReview: skipping during rebase/merge/cherry-pick" >&2
 	exit 0
@@ -47,10 +50,6 @@ if [ "$LRC_INTERACTIVE" = "0" ]; then
 	echo "LiveReview prepare-commit-msg: attestation present for $TREE_HASH; proceeding" >&2
 	exit 0
 fi
-
-# State file for hook coordination
-STATE_FILE=".git/livereview_state"
-LOCK_DIR=".git/livereview_state.lock"
 
 # Cleanup function
 cleanup_lock() {
@@ -105,7 +104,6 @@ while ! mkdir "$LOCK_DIR" 2>/dev/null; do
 done
 
 # Capture current commit message (available in prepare-commit-msg)
-INITIAL_MSG_FILE=".git/livereview_initial_message.$$"
 if [ -n "$COMMIT_MSG_FILE" ] && [ -f "$COMMIT_MSG_FILE" ]; then
 	cat "$COMMIT_MSG_FILE" > "$INITIAL_MSG_FILE" 2>/dev/null || true
 fi
