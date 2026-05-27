@@ -115,14 +115,45 @@ func TestIsManagedClaudeCommandPath(t *testing.T) {
 
 func TestGenerateClaudeLRCSkillContainsCanonicalCommands(t *testing.T) {
 	skill := generateClaudeLRCSkill()
+	if strings.Contains(skill, "\t") {
+		t.Fatal("expected generated Claude skill to avoid tabs so YAML frontmatter stays parseable")
+	}
 	for _, fragment := range []string{
 		"name: lrc",
 		"lrc hooks status",
 		"lrc hooks disable --surface claude",
 		"lrc hooks install --surface claude",
+		"Never use skip as a fallback",
+		"Never disable hooks as a fallback",
 	} {
 		if !strings.Contains(skill, fragment) {
 			t.Fatalf("expected skill to contain %q", fragment)
+		}
+	}
+}
+
+func TestGenerateGlobalClaudeWrapperScriptAllowsMissingReviewModeVersionLine(t *testing.T) {
+	script := generateGlobalClaudeWrapperScript()
+
+	if strings.Contains(script, `unable to determine lrc review mode`) {
+		t.Fatal("expected wrapper to tolerate lrc binaries that omit the Review mode line")
+	}
+	if !strings.Contains(script, `if [[ "$lrc_review_mode" == "fake" ]]; then`) {
+		t.Fatal("expected wrapper to keep rejecting fake-review binaries")
+	}
+}
+
+func TestGenerateGlobalClaudeWrapperScriptExtractsHeredocCommitMessage(t *testing.T) {
+	script := generateGlobalClaudeWrapperScript()
+
+	for _, fragment := range []string{
+		`import re`,
+		`def extract_heredoc_command_substitution(value):`,
+		`cat\s+<<-?`,
+		`resolved_message = extract_heredoc_command_substitution(message)`,
+	} {
+		if !strings.Contains(script, fragment) {
+			t.Fatalf("expected wrapper script to contain %q", fragment)
 		}
 	}
 }

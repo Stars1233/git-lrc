@@ -571,12 +571,6 @@ lrc_bin="$(command -v lrc)"
 
 lrc_review_mode="$($lrc_bin version 2>/dev/null | awk -F': ' '/Review mode/ {print $2; exit}')"
 
-if [[ -z "$lrc_review_mode" ]]; then
-  echo "LiveReview: unable to determine lrc review mode from $lrc_bin" >&2
-  echo "LiveReview: rebuild the CLI with 'make build-local && lrc hooks install' before retrying git commit" >&2
-  exit 1
-fi
-
 if [[ "$lrc_review_mode" == "fake" ]]; then
   echo "LiveReview: refusing to use fake-review lrc binary at $lrc_bin" >&2
   echo "LiveReview: rebuild the real CLI with 'make build-local && lrc hooks install' before retrying git commit" >&2
@@ -590,9 +584,30 @@ fi
 
 if ! initial_message=$(LRC_ORIGINAL_GIT_COMMIT="$original_command" python3 - <<'PY'
 import os
+import re
 import shlex
 
 command = os.environ.get("LRC_ORIGINAL_GIT_COMMIT", "")
+
+def extract_heredoc_command_substitution(value):
+	if not value.startswith("$(") or not value.endswith(")"):
+		return None
+
+	body = value[2:-1]
+	lines = body.splitlines()
+	if not lines:
+		return None
+
+	first_line = lines[0].strip()
+	match = re.fullmatch(r"cat\s+<<-?\s*(?:'([^']+)'|\"([^\"]+)\"|([A-Za-z_][A-Za-z0-9_]*))", first_line)
+	if not match:
+		return None
+
+	marker = next(group for group in match.groups() if group is not None)
+	if len(lines) < 2 or lines[-1].strip() != marker:
+		return None
+
+	return "\n".join(lines[1:-1])
 
 try:
     tokens = shlex.split(command, posix=True)
@@ -614,6 +629,10 @@ while i < len(tokens):
         message = token[2:]
         break
     i += 1
+
+resolved_message = extract_heredoc_command_substitution(message)
+if resolved_message is not None:
+	message = resolved_message
 
 print(message, end="")
 PY
@@ -678,15 +697,15 @@ esac
 }
 
 func generateClaudeLRCSkill() string {
-	return `---
+	skill := `---
 name: lrc
 description: >
   Manage LiveReview code review for staged changes in this repo. Run /lrc review to open a
   browser-based AI review of staged changes before committing. Use /lrc skip to bypass review and
   write an attestation, or /lrc vouch to manually approve without AI. Check and toggle hook state
   with /lrc hooks status, hooks disable, hooks enable, hooks install, or hooks uninstall. Invoke
-  when the user wants to review code, skip a review, vouch for changes, check if LiveReview is
-  active, turn off hooks, or reinstall the Claude git-commit gate.
+	when the user explicitly wants to review code, explicitly skip a review, vouch for changes,
+	check if LiveReview is active, turn off hooks, or reinstall the Claude git-commit gate.
 argument-hint: "review | skip | vouch | hooks [status|enable|disable|install|uninstall] [--surface claude|git]"
 ---
 
@@ -721,8 +740,11 @@ Translate plain natural-language requests to the nearest command before running.
 ## Rules
 
 - Prefer lrc hooks status before mutating hook state when intent is ambiguous.
+- Use ` + "`lrc review --staged --skip`" + ` only when the user explicitly asks to skip or bypass review. Never use skip as a fallback after a hook, wrapper, or review failure.
+- Use ` + "`lrc hooks disable`" + ` or ` + "`lrc hooks disable --surface claude`" + ` only when the user explicitly asks to disable hooks. Never disable hooks as a fallback for a failing review flow.
 - Repo-local disable/enable uses marker files under .git/lrc/: disabled, disabled-git, disabled-claude.
 - Global Claude integration lives in ~/.lrc/claude/hooks/ and ~/.claude/settings.json — manage only via lrc hooks install/uninstall.
 - Never edit .claude/settings.local.json directly; it is not the control plane when the global install is active.
 `
+	return strings.ReplaceAll(skill, "\t", "  ")
 }
