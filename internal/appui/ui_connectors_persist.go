@@ -56,7 +56,7 @@ func persistAuthTokensToConfig(configPath string, jwt string, refreshToken strin
 	return nil
 }
 
-func persistOrgContextToConfig(configPath string, orgID string, orgName string) error {
+func persistOrgContextToConfig(configPath string, orgID string, orgName string, apiKey string) error {
 	originalBytes, err := storage.ReadConfigFile(configPath)
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
@@ -69,6 +69,9 @@ func persistOrgContextToConfig(configPath string, orgID string, orgName string) 
 	updated := upsertQuotedConfigValue(content, "org_id", strings.TrimSpace(orgID))
 	if strings.TrimSpace(orgName) != "" {
 		updated = upsertQuotedConfigValue(updated, "org_name", strings.TrimSpace(orgName))
+	}
+	if strings.TrimSpace(apiKey) != "" {
+		updated = upsertQuotedConfigValue(updated, "api_key", strings.TrimSpace(apiKey))
 	}
 
 	if err := storage.WriteFileAtomically(configPath, []byte(updated), 0600); err != nil {

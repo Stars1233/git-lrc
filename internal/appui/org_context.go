@@ -159,9 +159,21 @@ func (s *connectorManagerServer) handleSetOrgContext(w http.ResponseWriter, r *h
 	s.cfg.OrgID = orgIDValue
 	s.cfg.OrgName = selectedOrgName
 	configPath := s.cfg.ConfigPath
+	jwt := s.cfg.JWT
+	apiURL := s.cfg.APIURL
 	s.mu.Unlock()
 
-	if err := persistOrgContextToConfig(configPath, orgIDValue, selectedOrgName); err != nil {
+	var newAPIKey string
+	if strings.TrimSpace(jwt) != "" {
+		key, keyErr := s.createAPIKeyWithJWT(apiURL, orgIDValue, jwt)
+		if keyErr != nil {
+			fmt.Printf("Warning: failed to proactively generate new API key for org context switch: %v\n", keyErr)
+		} else {
+			newAPIKey = key
+		}
+	}
+
+	if err := persistOrgContextToConfig(configPath, orgIDValue, selectedOrgName, newAPIKey); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("failed to persist organization context: %v", err))
 		return
 	}
@@ -208,4 +220,38 @@ func parseOrgIDFromBody(body []byte) (int64, error) {
 	}
 
 	return 0, fmt.Errorf("org_id must be a string or number")
+}
+
+type createAPIKeyRuntimeRequest struct {
+	Label string `json:"label"`
+}
+
+type createAPIKeyRuntimeResponse struct {
+	PlainKey string `json:"plain_key"`
+}
+
+func (s *connectorManagerServer) createAPIKeyWithJWT(apiURL, orgID, jwtToken string) (string, error) {
+	if strings.TrimSpace(jwtToken) == "" {
+		return "", fmt.Errorf("missing jwt token")
+	}
+
+	payload := createAPIKeyRuntimeRequest{Label: "LRC CLI Key"}
+	resp, err := network.SetupCreateAPIKey(s.client, apiURL, orgID, payload, jwtToken)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("create API key returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(resp.Body)))
+	}
+
+	var res createAPIKeyRuntimeResponse
+	if err := json.Unmarshal(resp.Body, &res); err != nil {
+		return "", fmt.Errorf("failed to parse create key response: %w", err)
+	}
+	if strings.TrimSpace(res.PlainKey) == "" {
+		return "", fmt.Errorf("create key response missing plain_key")
+	}
+
+	return res.PlainKey, nil
 }
