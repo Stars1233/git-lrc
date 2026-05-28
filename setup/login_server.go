@@ -5,6 +5,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 )
 
 // BuildSigninURL builds the Hexmos signin URL for setup callback flow.
@@ -16,8 +18,8 @@ func BuildSigninURL(callbackURL string) (string, error) {
 	if cbURL.Scheme != "http" && cbURL.Scheme != "https" {
 		return "", fmt.Errorf("invalid callback url scheme: %s", cbURL.Scheme)
 	}
-	if cbURL.Scheme == "http" && cbURL.Hostname() != "127.0.0.1" && cbURL.Hostname() != "localhost" {
-		return "", fmt.Errorf("callback url must use localhost/127.0.0.1")
+	if !isAllowedSetupCallbackHost(cbURL) {
+		return "", fmt.Errorf("callback url must use localhost/127.0.0.1 or the current GitHub Codespaces forwarded host")
 	}
 
 	signinBase, err := url.Parse(HexmosSigninBase)
@@ -33,6 +35,24 @@ func BuildSigninURL(callbackURL string) (string, error) {
 	q.Set("appRedirectURI", callbackURL)
 	signinBase.RawQuery = q.Encode()
 	return signinBase.String(), nil
+}
+
+func isAllowedSetupCallbackHost(cbURL *url.URL) bool {
+	host := cbURL.Hostname()
+	if host == "127.0.0.1" || host == "localhost" {
+		return true
+	}
+	if cbURL.Scheme != "https" {
+		return false
+	}
+
+	name := os.Getenv("CODESPACE_NAME")
+	domain := os.Getenv("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN")
+	if name == "" || domain == "" {
+		return false
+	}
+
+	return strings.HasPrefix(host, name+"-") && strings.HasSuffix(host, "."+domain)
 }
 
 // StartTemporaryServer starts an HTTP server with the given listener and handler.

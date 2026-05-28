@@ -89,19 +89,19 @@ func TestBuildFakeCompletedResult(t *testing.T) {
 func TestBuildFakeCompletedResultForFiles(t *testing.T) {
 	baseFiles := []reviewmodel.DiffReviewFileResult{
 		{
-			FilePath: "src/fake_test.go",
+			FilePath: "src/ui_connectors_handlers.go",
 			Hunks: []reviewmodel.DiffReviewHunk{
 				{
 					OldStartLine: 1,
 					OldLineCount: 0,
 					NewStartLine: 1,
 					NewLineCount: 3,
-					Content:      "@@ -0,0 +1,3 @@\n+package main\n+func fake() {\n+}\n",
+					Content:      "@@ -0,0 +1,3 @@\n+func handleConnector(payload map[string]any) {\n+\tpayload[\"provider\"] = \"live\"\n+}\n",
 				},
 			},
 		},
 		{
-			FilePath: "src/only_line.txt",
+			FilePath: "src/only_one_line.txt",
 			Hunks: []reviewmodel.DiffReviewHunk{
 				{
 					OldStartLine: 0,
@@ -129,67 +129,81 @@ func TestBuildFakeCompletedResultForFiles(t *testing.T) {
 	}
 }
 
-func TestBuildSyntheticCommentsByFileIncludesInteriorScenario(t *testing.T) {
+func TestBuildSyntheticCommentsByFileUsesConfiguredLinePicks(t *testing.T) {
 	files := []reviewmodel.DiffReviewFileResult{
 		{
-			FilePath: "src/interior_case.go",
+			FilePath: "src/edge_cases.txt",
 			Hunks: []reviewmodel.DiffReviewHunk{
 				{
 					OldStartLine: 0,
 					OldLineCount: 0,
 					NewStartLine: 1,
-					NewLineCount: 6,
-					Content:      "@@ -0,0 +1,6 @@\n+line-1\n line-context-a\n+line-2\n line-context-b\n+line-3\n+line-4\n",
+					NewLineCount: 4,
+					Content:      "@@ -0,0 +1,4 @@\n+alpha-updated\n+beta-stable\n+gamma-shifted\n+delta-updated\n",
 				},
 			},
 		},
 	}
 
 	commentsByFile := buildSyntheticCommentsByFile(files)
-	comments := commentsByFile["src/interior_case.go"]
-	if len(comments) != 3 {
-		t.Fatalf("comments len = %d, want 3", len(comments))
+	comments := commentsByFile["src/edge_cases.txt"]
+	if len(comments) != 2 {
+		t.Fatalf("comments len = %d, want 2", len(comments))
 	}
 
 	firstFound := false
 	lastFound := false
-	interiorFound := false
 	for _, c := range comments {
-		if c.Content == "Hunk-start line: verify Copy Issue handles missing previous line context correctly." {
+		if c.Content == "`alpha-updated` is inconsistent with downstream parser expectations; update the canonical test fixture." {
 			firstFound = true
 			if c.Line != 1 {
-				t.Fatalf("first scenario line = %d, want 1", c.Line)
+				t.Fatalf("first configured line = %d, want 1", c.Line)
 			}
 		}
-		if c.Content == "Hunk-end line: verify Copy Issue handles missing next line context correctly." {
+		if c.Content == "`delta-updated` does not match the expected integration test output — realign the test data." {
 			lastFound = true
-			if c.Line != 6 {
-				t.Fatalf("last scenario line = %d, want 6", c.Line)
-			}
-		}
-		if c.Content == "Interior line: verify Copy Issue includes both previous and next lines in the code excerpt." {
-			interiorFound = true
-			if c.Line != 3 {
-				t.Fatalf("interior scenario line = %d, want 3", c.Line)
+			if c.Line != 4 {
+				t.Fatalf("last configured line = %d, want 4", c.Line)
 			}
 		}
 	}
 
-	if !firstFound || !lastFound || !interiorFound {
-		t.Fatalf("missing required scenarios: first=%v last=%v interior=%v", firstFound, lastFound, interiorFound)
+	if !firstFound || !lastFound {
+		t.Fatalf("missing required scenarios: first=%v last=%v", firstFound, lastFound)
+	}
+}
+
+func TestCollectHunkAddedLineNumbersIncludesInteriorAdditions(t *testing.T) {
+	hunk := reviewmodel.DiffReviewHunk{
+		OldStartLine: 0,
+		OldLineCount: 0,
+		NewStartLine: 1,
+		NewLineCount: 6,
+		Content:      "@@ -0,0 +1,6 @@\n+line-1\n line-context-a\n+line-2\n line-context-b\n+line-3\n+line-4\n",
+	}
+
+	got := collectHunkAddedLineNumbers(hunk)
+	want := []int{1, 3, 5, 6}
+	if len(got) != len(want) {
+		t.Fatalf("line count = %d, want %d (%v)", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("line[%d] = %d, want %d (all=%v)", i, got[i], want[i], got)
+		}
 	}
 }
 
 func TestPollReviewFakeCompletes(t *testing.T) {
 	baseFiles := []reviewmodel.DiffReviewFileResult{
 		{
-			FilePath: "src/fake_test.go",
+			FilePath: "src/fake_large_config.toml",
 			Hunks: []reviewmodel.DiffReviewHunk{{
 				OldStartLine: 1,
 				OldLineCount: 0,
 				NewStartLine: 1,
 				NewLineCount: 2,
-				Content:      "@@ -0,0 +1,2 @@\n+line one\n+line two\n",
+				Content:      "@@ -0,0 +1,2 @@\n+enable_telemetry = true\n+env = \"local\"\n",
 			}},
 		},
 	}

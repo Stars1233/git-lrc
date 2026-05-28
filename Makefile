@@ -1,4 +1,14 @@
-.PHONY: build build-win build-all build-local build-local-test run run-fake-review dev-ui bump release release-internal release-gh clean test testall test-pkg upload-secrets download-secrets security-govulncheck security-govulncheck-json security-osv security-triage security-gitleaks security-b2-audit security-b2-cleanup-plan security-b2-cleanup-apply security-publish-release-manifest security-secret-regression security-sbom security-sbom-cyclonedx security-sbom-spdx security-sbom-validate release-notes-init release-notes-check release-preflight check-status-doc use-local-backend use-livereview-backend
+.PHONY: build build-win build-all build-local build-local-test run run-fake-review \
+	dev-ui bump release release-internal release-gh clean test test-go \
+	test-simulator test-hooks-worktree test-hooks-claude test-hooks-global \
+	test-js testall test-pkg upload-secrets download-secrets \
+	security-govulncheck security-govulncheck-json security-osv security-triage \
+	security-gitleaks security-b2-audit security-b2-cleanup-plan \
+	security-b2-cleanup-apply security-publish-release-manifest \
+	security-secret-regression security-sbom security-sbom-cyclonedx \
+	security-sbom-spdx security-sbom-validate release-notes-init \
+	release-notes-check release-preflight check-status-doc use-local-backend \
+	use-livereview-backend
 
 # Go parameters
 GOENV=env -u GOROOT
@@ -146,12 +156,38 @@ clean:
 	@rm -rf dist/ $(BINARY_NAME)
 	@echo "✅ Clean complete"
 
-# Run tests
-test:
+# Run the full Go test baseline
+test-go:
 	$(GOTEST) -count=1 ./...
 
-# Run all tests (alias for test)
-testall: test
+# Run simulator and nearby workflow-specific regressions
+test-simulator:
+	$(GOTEST) -count=1 ./internal/simulator
+	# Keep the appcore compatibility spot-check explicit; these cases are called out in internal/simulator/README.md.
+	$(GOTEST) -count=1 ./internal/appcore -run 'TestActionAllowedInPhase|TestValidateInteractiveDecisionRequest|TestReadCommitMessageFromRequest|TestPollReviewFakeCompletes|TestPollReviewFakeCancelled'
+
+# Run deterministic Git/worktree hook regression harness
+test-hooks-worktree: build-local
+	@PATH="$(HOME)/.local/bin:$$PATH" bash tests/worktree-hooks.sh
+
+# Run deterministic Claude hook regression harness
+test-hooks-claude: build-local
+	@PATH="$(HOME)/.local/bin:$$PATH" bash tests/claude-worktree-hooks.sh
+
+# Run deterministic global hook lifecycle regression harness
+test-hooks-global: build-local-test
+	@PATH="$(HOME)/.local/bin:$$PATH" LRC_TEST_BIN="$(HOME)/.local/bin/lrc" bash tests/global-hooks.sh
+
+# Run headless-safe Node UI state tests
+test-js:
+	node --test internal/staticserve/static/components/*.test.mjs
+
+# Preserve the existing default test alias
+test: test-go
+
+# Run the current minimum-confidence deterministic lanes.
+# test-go already covers the simulator package, so keep the aggregate target non-duplicative.
+testall: test-go test-hooks-worktree test-hooks-claude test-hooks-global
 
 # Run tests for a specific package (example: make test-pkg PKG=./internal/naming)
 test-pkg:

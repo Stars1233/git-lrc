@@ -93,6 +93,26 @@ make test-pkg PKG=./path/to/package
 
 Use broader test runs only when the scope actually justifies them.
 
+The main confidence lanes are now split explicitly:
+
+```bash
+make test-go
+make test-simulator
+make test-hooks-worktree
+make test-hooks-claude
+make test-js
+make testall
+```
+
+Use the cheapest lane that proves the behavior you changed:
+
+- `make test-simulator` for decision flow, phase gating, message resolution, and race behavior.
+- `make test-hooks-worktree` or `make test-hooks-claude` for real temp-repo, hook, worktree, and Claude wrapper regressions.
+- `make test-js` for deterministic UI state-model regressions.
+- `make test-go` when the touched slice is broader or package-scoped.
+
+If a bug escaped once, add a regression test in the cheapest relevant lane before moving on.
+
 For end-to-end testing without real AI calls, use fake review mode:
 
 ```bash

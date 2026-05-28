@@ -41,6 +41,25 @@ func TestBuildSigninURL_RejectsNonLocalCallback(t *testing.T) {
 	}
 }
 
+func TestBuildSigninURL_AllowsCodespacesForwardedCallback(t *testing.T) {
+	t.Setenv("CODESPACE_NAME", "lively-space-train")
+	t.Setenv("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN", "app.github.dev")
+
+	callbackURL := "https://lively-space-train-4321.app.github.dev/callback"
+	signinURL, err := BuildSigninURL(callbackURL)
+	if err != nil {
+		t.Fatalf("BuildSigninURL returned error: %v", err)
+	}
+
+	parsed, err := url.Parse(signinURL)
+	if err != nil {
+		t.Fatalf("failed to parse signin URL: %v", err)
+	}
+	if got := parsed.Query().Get("appRedirectURI"); got != callbackURL {
+		t.Fatalf("unexpected appRedirectURI value %q", got)
+	}
+}
+
 func TestNewSetupHTTPClient_BlocksCrossHostRedirect(t *testing.T) {
 	client := newSetupHTTPClient(5 * time.Second)
 	if client.CheckRedirect == nil {

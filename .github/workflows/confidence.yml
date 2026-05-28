@@ -1,0 +1,67 @@
+name: Minimum Confidence Tests
+
+on:
+  workflow_dispatch: {}
+  pull_request: {}
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  go-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          cache: true
+          go-version-file: go.mod
+      - name: Run Go baseline
+        run: make test-go
+
+  hooks-worktree:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          cache: true
+          go-version-file: go.mod
+      - name: Run worktree hook regressions
+        run: make test-hooks-worktree
+
+  hooks-claude:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          cache: true
+          go-version-file: go.mod
+      - name: Run Claude hook regressions
+        run: make test-hooks-claude
+
+  hooks-global:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          cache: true
+          go-version-file: go.mod
+      - name: Run global hook lifecycle regressions
+        run: make test-hooks-global
+
+  ui-state:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run deterministic UI state tests
+        run: make test-js

@@ -126,17 +126,23 @@ trap cleanup EXIT
 
 # ─── Save original state ─────────────────────────────────────────────────────
 
+LRC="${LRC_TEST_BIN:-$(command -v lrc)}"
+if [[ -z "$LRC" ]]; then
+    red "ERROR: lrc not found in PATH. Build and install first."
+    exit 1
+fi
+
+PATH="$(dirname "$LRC"):$PATH"
+export PATH
+
+TEST_HOME="$(mktemp -d /tmp/lrc-global-hooks-home.XXXXXX)"
+export HOME="$TEST_HOME"
+
 ORIG_HOOKS_PATH="$(git config --global --get core.hooksPath 2>/dev/null || true)"
 if [[ -n "$ORIG_HOOKS_PATH" ]]; then
     HAD_HOOKS_PATH="yes"
 else
     HAD_HOOKS_PATH="no"
-fi
-
-LRC="$(command -v lrc)"
-if [[ -z "$LRC" ]]; then
-    red "ERROR: lrc not found in PATH. Build and install first."
-    exit 1
 fi
 
 bold "Using lrc: $LRC"
@@ -145,7 +151,8 @@ bold "Original core.hooksPath: '${ORIG_HOOKS_PATH:-<unset>}'"
 # Use a dedicated test hooks path so we don't clobber the user's real one
 TEST_HOOKS_DIR="$(mktemp -d /tmp/lrc-test-hooks.XXXXXX)"
 TEST_REPO="$(mktemp -d /tmp/lrc-test-repo.XXXXXX)"
-CLEANUP_ITEMS+=("$TEST_HOOKS_DIR" "$TEST_REPO")
+EMPTY_HOOKS_DIR="$(mktemp -d /tmp/lrc-empty-hooks.XXXXXX)"
+CLEANUP_ITEMS+=("$TEST_HOME" "$TEST_HOOKS_DIR" "$TEST_REPO" "$EMPTY_HOOKS_DIR")
 
 # ═════════════════════════════════════════════════════════════════════════════
 bold ""
@@ -154,7 +161,7 @@ bold "══ Phase 1: Install global hooks ════════════�
 # Unset any existing core.hooksPath first for a clean slate
 git config --global --unset core.hooksPath 2>/dev/null || true
 
-install_output="$(lrc hooks install --path "$TEST_HOOKS_DIR" 2>&1)"
+install_output="$("$LRC" hooks install --surface git --path "$TEST_HOOKS_DIR" 2>&1)"
 echo "$install_output"
 
 assert_contains "install reports success" "LiveReview global hooks installed" "$install_output"
@@ -190,9 +197,8 @@ git config user.name "Test User"
 # Need an initial commit so the repo is usable
 echo "initial" > README.md
 git add README.md
-# Initial commit - do it in non-interactive mode. Since there's no attestation
-# yet, we need to bypass the hook for the initial commit. Use --no-verify.
-git commit --no-verify -m "Initial commit"
+# Initial commit - bypass all hooks by using a separate empty hooks path.
+git -c core.hooksPath="$EMPTY_HOOKS_DIR" commit -m "Initial commit"
 
 # Now stage real changes
 echo "hello world" > test.txt
@@ -217,7 +223,7 @@ assert_contains "test.txt still staged (not committed)" "A  test.txt" "$status_o
 bold ""
 bold "══ Phase 4: Uninstall global hooks ═════════════════════════"
 
-uninstall_output="$(lrc hooks uninstall --path "$TEST_HOOKS_DIR" 2>&1)"
+uninstall_output="$("$LRC" hooks uninstall --surface git --path "$TEST_HOOKS_DIR" 2>&1)"
 echo "$uninstall_output"
 
 assert_contains "uninstall reports removal" "Removed LiveReview sections" "$uninstall_output"
@@ -271,10 +277,10 @@ git config --global --unset core.hooksPath 2>/dev/null || true
 TEST_HOOKS_DIR2="$(mktemp -d /tmp/lrc-test-hooks2.XXXXXX)"
 CLEANUP_ITEMS+=("$TEST_HOOKS_DIR2")
 
-lrc hooks install --path "$TEST_HOOKS_DIR2" >/dev/null 2>&1
+"$LRC" hooks install --surface git --path "$TEST_HOOKS_DIR2" >/dev/null 2>&1
 rm -f "$TEST_HOOKS_DIR2/.lrc-hooks-meta.json"
 
-recovery_output="$(lrc hooks uninstall --path "$TEST_HOOKS_DIR2" 2>&1)"
+recovery_output="$("$LRC" hooks uninstall --surface git --path "$TEST_HOOKS_DIR2" 2>&1)"
 echo "$recovery_output"
 
 post_path="$(git config --global --get core.hooksPath 2>/dev/null || true)"
