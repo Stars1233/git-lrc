@@ -374,3 +374,28 @@ func (s *connectorManagerServer) handleOllamaModels(w http.ResponseWriter, r *ht
 	}
 	writeRawJSON(w, status, respBody)
 }
+
+func (s *connectorManagerServer) handleProviderModels(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// URL format: /api/ui/connectors/providers/{provider}/models
+	path := strings.TrimPrefix(r.URL.Path, "/api/ui/connectors/providers/")
+	parts := strings.Split(path, "/")
+	if len(parts) < 2 || parts[1] != "models" {
+		writeJSONError(w, http.StatusNotFound, "not found")
+		return
+	}
+	provider := parts[0]
+
+	apiPath := fmt.Sprintf("/api/v1/aiconnectors/providers/%s/models", provider)
+	status, respBody, err := s.proxyJSONRequest(http.MethodGet, apiPath, nil)
+	if err != nil {
+		writeJSONError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeRawJSON(w, status, respBody)
+}
+

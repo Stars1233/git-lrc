@@ -6,6 +6,12 @@ export function ConnectorFormPage({
   providers,
   selectedProvider,
   modelOptions,
+  filteredModels = [],
+  searchQuery = '',
+  setSearchQuery,
+  isOpen = false,
+  setIsOpen,
+  dropdownRef,
   fetchingModels,
   modelsFetched,
   saving,
@@ -19,6 +25,7 @@ export function ConnectorFormPage({
   onGenerateName,
   onCancel,
   connectorNamePlaceholder,
+  apiDefaultModel = '',
 }) {
   const isOllama = form.provider_name === 'ollama';
   const showBaseURL = Boolean(selectedProvider.requiresBaseURL);
@@ -134,21 +141,97 @@ export function ConnectorFormPage({
               `
             : html`
                 <label>Model</label>
-                ${modelOptions.length > 0
+                ${fetchingModels
                   ? html`
-                      <select
-                        value=${form.selected_model}
-                        onChange=${(event) => onFieldChange('selected_model', event.target.value)}
-                      >
-                        ${modelOptions.map((model) => html`
-                          <option value=${model}>
-                            ${model}${model === selectedProvider.defaultModel ? ' (Recommended)' : ''}
-                          </option>
-                        `)}
+                      <select disabled class="loading-select">
+                        <option>Loading models...</option>
                       </select>
                     `
-                  : html`<input value=${form.selected_model} onInput=${(event) => onFieldChange('selected_model', event.target.value)} />`}
-              `}
+                  : modelOptions.length > 0
+                    ? html`
+                        <div ref=${dropdownRef} class="custom-select-wrapper" style="position: relative; width: 100%; z-index: ${isOpen ? '100' : '1'}; margin-bottom: 10px;">
+                          <!-- Trigger Button styled exactly like a native select -->
+                          <button
+                            type="button"
+                            class="custom-select-trigger"
+                            style="width: 100%; background: var(--bg-tertiary, #2d2d30); color: var(--text-secondary, #d4d4d4); border: 1px solid var(--border-medium, #454545); border-radius: 4px; padding: 10px; text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer; outline: none;"
+                            onClick=${() => setIsOpen(!isOpen)}
+                          >
+                            <span class="truncate" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90%;">
+                              ${form.selected_model
+                                ? `${form.selected_model}${form.selected_model === apiDefaultModel ? ' (Recommended)' : ''}`
+                                : 'Select a model'}
+                            </span>
+                            <span style="color: var(--text-muted, #858585); font-size: 10px; margin-left: 8px;">${isOpen ? '▲' : '▼'}</span>
+                          </button>
+
+                          ${isOpen
+                            ? html`
+                                <div
+                                  class="custom-select-options-container"
+                                  style="position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: var(--bg-tertiary, #2d2d30); border: 1px solid var(--border-medium, #454545); border-radius: 4px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); max-height: 280px; overflow-y: auto; z-index: 9999;"
+                                >
+                                  <!-- Search box pinned to the top, styled like standard inputs -->
+                                  <div style="position: sticky; top: 0; padding: 8px; background: var(--bg-tertiary, #2d2d30); border-bottom: 1px solid var(--border-subtle, #3c3c3c); z-index: 10;">
+                                    <input
+                                      type="text"
+                                      placeholder="Search model name..."
+                                      value=${searchQuery}
+                                      onInput=${(e) => setSearchQuery(e.target.value)}
+                                      onClick=${(e) => e.stopPropagation()}
+                                      style="width: 100%; background: var(--bg-primary, #1e1e1e); color: var(--text-primary, #cccccc); border: 1px solid var(--border-medium, #454545); border-radius: 4px; padding: 8px 10px; font-size: 13px; box-sizing: border-box; margin-bottom: 0;"
+                                      autofocus
+                                    />
+                                  </div>
+
+                                  <!-- Options list -->
+                                  <div style="padding: 4px 0;">
+                                    ${filteredModels.map(
+                                      (model) => html`
+                                        <button
+                                          type="button"
+                                          class="custom-select-option"
+                                          style="width: 100%; text-align: left; padding: 8px 12px; font-size: 13px; background: ${form.selected_model === model ? 'var(--bg-active, #37373d)' : 'transparent'}; color: ${form.selected_model === model ? '#fff' : 'var(--text-secondary, #d4d4d4)'}; border: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center;"
+                                          onClick=${() => {
+                                            onFieldChange('selected_model', model);
+                                            setIsOpen(false);
+                                            setSearchQuery('');
+                                          }}
+                                          onMouseEnter=${(e) => {
+                                            e.currentTarget.style.background = 'var(--bg-hover, #2a2d2e)';
+                                            e.currentTarget.style.color = 'var(--text-primary, #cccccc)';
+                                          }}
+                                          onMouseLeave=${(e) => {
+                                            e.currentTarget.style.background = form.selected_model === model ? 'var(--bg-active, #37373d)' : 'transparent';
+                                            e.currentTarget.style.color = form.selected_model === model ? '#fff' : 'var(--text-secondary, #d4d4d4)';
+                                          }}
+                                        >
+                                          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75%;">${model}</span>
+                                          ${model === apiDefaultModel
+                                            ? html`<span style="font-size: 10px; background: var(--bg-active, #37373d); color: var(--text-muted, #858585); padding: 2px 6px; border-radius: 4px; margin-left: 8px; white-space: nowrap;">Recommended</span>`
+                                            : ''}
+                                        </button>
+                                      `
+                                    )}
+
+                                    ${filteredModels.length === 0
+                                      ? html`<div style="padding: 10px 12px; font-size: 13px; color: var(--text-muted, #858585); font-style: italic;">No matching models found</div>`
+                                      : ''}
+                                  </div>
+                                </div>
+                              `
+                            : ''}
+                        </div>
+                      `
+                    : html`
+                        <input
+                          value=${form.selected_model}
+                          placeholder="Enter model ID (e.g., gpt-4o)"
+                          onInput=${(event) => onFieldChange('selected_model', event.target.value)}
+                        />
+                      `}
+              `
+            }
 
           <div class="row">
             <button disabled=${effectiveSaveDisabled} onClick=${onSave}>

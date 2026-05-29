@@ -39,3 +39,8 @@ export async function fetchGitHubReleases() {
 
   return data;
 }
+
+export async function fetchProviderModels(provider) {
+  return api(`/api/ui/connectors/providers/${provider}/models`);
+}
+
