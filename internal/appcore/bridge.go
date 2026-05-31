@@ -488,3 +488,27 @@ func RunHooksStatus(c *cli.Context) error {
 func RunAttestationTrailer(c *cli.Context) error {
 	return runAttestationTrailer(c)
 }
+
+func RunInternalClaudePreToolUse(c *cli.Context) error {
+	return runInternalClaudePreToolUse(c)
+}
+
+func RunInternalClaudeRunCommit(c *cli.Context) error {
+	return runInternalClaudeRunCommit(c)
+}
+
+func RunInternalClaudeSetupStart(c *cli.Context) error {
+	return runInternalClaudeSetupStart(c)
+}
+
+func RunInternalClaudeSetupWorker(c *cli.Context) error {
+	return runInternalClaudeSetupWorker(c)
+}
+
+func RunInternalClaudeSetupSubmitKey(c *cli.Context) error {
+	return runInternalClaudeSetupSubmitKey(c)
+}
+
+func RunInternalClaudeSetupStatus(c *cli.Context) error {
+	return runInternalClaudeSetupStatus(c)
+}

@@ -73,7 +73,13 @@ func main() {
 		RunAttestationTrailer: appcore.RunAttestationTrailer,
 		RunSetup:              appui.RunSetup,
 		RunUI:                 appui.RunUI,
-		RunUsageInspect:       appcore.RunUsageInspect,
+		RunUsageInspect:              appcore.RunUsageInspect,
+		RunInternalClaudePreToolUse:     appcore.RunInternalClaudePreToolUse,
+		RunInternalClaudeRunCommit:      appcore.RunInternalClaudeRunCommit,
+		RunInternalClaudeSetupStart:     appcore.RunInternalClaudeSetupStart,
+		RunInternalClaudeSetupWorker:    appcore.RunInternalClaudeSetupWorker,
+		RunInternalClaudeSetupSubmitKey: appcore.RunInternalClaudeSetupSubmitKey,
+		RunInternalClaudeSetupStatus:    appcore.RunInternalClaudeSetupStatus,
 	})
 
 	if err := app.Run(os.Args); err != nil {

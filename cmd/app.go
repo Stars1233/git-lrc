@@ -22,7 +22,13 @@ type Handlers struct {
 	RunAttestationTrailer cli.ActionFunc
 	RunSetup              cli.ActionFunc
 	RunUI                 cli.ActionFunc
-	RunUsageInspect       cli.ActionFunc
+	RunUsageInspect                cli.ActionFunc
+	RunInternalClaudePreToolUse   cli.ActionFunc
+	RunInternalClaudeRunCommit    cli.ActionFunc
+	RunInternalClaudeSetupStart   cli.ActionFunc
+	RunInternalClaudeSetupWorker  cli.ActionFunc
+	RunInternalClaudeSetupSubmitKey cli.ActionFunc
+	RunInternalClaudeSetupStatus  cli.ActionFunc
 }
 
 // BuildApp constructs the full CLI app with all command wiring.
@@ -280,6 +286,77 @@ func BuildApp(version, buildTime, gitCommit, reviewMode string, baseFlags, debug
 				Name:   "ui",
 				Usage:  "Open local web UI to manage your git-lrc",
 				Action: h.RunUI,
+			},
+			{
+				Name:   "internal",
+				Usage:  "Internal back-office commands (not for direct use)",
+				Hidden: true,
+				Subcommands: []*cli.Command{
+					{
+						Name:   "claude",
+						Usage:  "Claude Code integration commands",
+						Hidden: true,
+						Subcommands: []*cli.Command{
+							{
+								Name:   "pre-tool-use",
+								Usage:  "PreToolUse hook handler — intercepts git commits for the LiveReview gate",
+								Hidden: true,
+								Action: h.RunInternalClaudePreToolUse,
+							},
+							{
+								Name:   "run-commit",
+								Usage:  "Runs lrc review then the original git commit (invoked by pre-tool-use rewrite)",
+								Hidden: true,
+								Flags: []cli.Flag{
+									&cli.StringFlag{
+										Name:     "encoded",
+										Usage:    "base64-encoded JSON payload from pre-tool-use",
+										Required: true,
+									},
+								},
+								Action: h.RunInternalClaudeRunCommit,
+							},
+							{
+								Name:   "setup",
+								Usage:  "Manage the lrc setup session (replaces setup-session.py)",
+								Hidden: true,
+								Subcommands: []*cli.Command{
+									{
+										Name:   "start",
+										Usage:  "Start a background lrc setup session",
+										Hidden: true,
+										Action: h.RunInternalClaudeSetupStart,
+									},
+									{
+										Name:   "worker",
+										Usage:  "Background worker — runs lrc setup and manages the key handoff",
+										Hidden: true,
+										Action: h.RunInternalClaudeSetupWorker,
+									},
+									{
+										Name:   "submit-key",
+										Usage:  "Submit the Gemini API key to a running setup session",
+										Hidden: true,
+										Flags: []cli.Flag{
+											&cli.StringFlag{
+												Name:     "key",
+												Usage:    "Gemini API key to submit",
+												Required: true,
+											},
+										},
+										Action: h.RunInternalClaudeSetupSubmitKey,
+									},
+									{
+										Name:   "status",
+										Usage:  "Print the current setup session status",
+										Hidden: true,
+										Action: h.RunInternalClaudeSetupStatus,
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 		Action: h.RunReviewSimple,
