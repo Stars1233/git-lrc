@@ -292,6 +292,7 @@ is_windows_host() {
 wait_for_plugin_install() {
 	local plugin_id="$1"
 	local attempts=200
+	local interval_seconds="0.1"
 	local output
 	local attempt
 
@@ -301,6 +302,7 @@ wait_for_plugin_install() {
 			printf '%s\n' "$output"
 			return 0
 		fi
+		sleep "$interval_seconds"
 	done
 
 	printf '%s\n' "$output"
