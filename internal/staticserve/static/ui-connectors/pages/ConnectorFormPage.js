@@ -86,16 +86,47 @@ export function ConnectorFormPage({
           />
 
           ${showBaseURL
-            ? html`
-                <label>Base URL (required)</label>
-                <input
-                  type="url"
-                  required
-                  placeholder=${selectedProvider.baseURLPlaceholder || 'http://localhost:11434/ollama/api'}
-                  value=${form.base_url}
-                  onInput=${(event) => onFieldChange('base_url', event.target.value)}
-                />
-              `
+            ? (() => {
+                const presets = selectedProvider.baseURLPresets || [];
+                const CUSTOM = '__custom__';
+                const effectivePreset = presets.find((p) => p.value === form.base_url) ? form.base_url : CUSTOM;
+                if (presets.length > 0) {
+                  return html`
+                    <label>Base URL (required)</label>
+                    <select
+                      value=${effectivePreset}
+                      onChange=${(e) => {
+                        const v = e.target.value;
+                        onFieldChange('base_url', v === CUSTOM ? '' : v);
+                      }}
+                    >
+                      ${presets.map((p) => html`<option value=${p.value}>${p.label}</option>`)}
+                      <option value=${CUSTOM}>Custom URL...</option>
+                    </select>
+                    ${effectivePreset === CUSTOM
+                      ? html`
+                          <input
+                            type="url"
+                            required
+                            placeholder=${selectedProvider.baseURLPlaceholder || 'https://'}
+                            value=${form.base_url}
+                            onInput=${(event) => onFieldChange('base_url', event.target.value)}
+                          />
+                        `
+                      : ''}
+                  `;
+                }
+                return html`
+                  <label>Base URL (required)</label>
+                  <input
+                    type="url"
+                    required
+                    placeholder=${selectedProvider.baseURLPlaceholder || 'http://localhost:11434/ollama/api'}
+                    value=${form.base_url}
+                    onInput=${(event) => onFieldChange('base_url', event.target.value)}
+                  />
+                `;
+              })()
             : ''}
 
           ${isOllama
@@ -223,13 +254,42 @@ export function ConnectorFormPage({
                             : ''}
                         </div>
                       `
-                    : html`
-                        <input
-                          value=${form.selected_model}
-                          placeholder="Enter model ID (e.g., gpt-4o)"
-                          onInput=${(event) => onFieldChange('selected_model', event.target.value)}
-                        />
-                      `}
+                    : (() => {
+                        const selectedBasePreset = (selectedProvider.baseURLPresets || []).find((p) => p.value === form.base_url);
+                        const mPresets = selectedBasePreset?.models || selectedProvider.modelPresets || [];
+                        const CUSTOM_MODEL = '__custom_model__';
+                        if (mPresets.length > 0) {
+                          const effectiveModel = mPresets.includes(form.selected_model) ? form.selected_model : CUSTOM_MODEL;
+                          return html`
+                            <select
+                              value=${effectiveModel}
+                              onChange=${(e) => {
+                                const v = e.target.value;
+                                onFieldChange('selected_model', v === CUSTOM_MODEL ? '' : v);
+                              }}
+                            >
+                              ${mPresets.map((m) => html`<option value=${m}>${m}</option>`)}
+                              <option value=${CUSTOM_MODEL}>+ Custom</option>
+                            </select>
+                            ${effectiveModel === CUSTOM_MODEL
+                              ? html`
+                                  <input
+                                    value=${form.selected_model}
+                                    placeholder="Enter model ID (e.g., claude-haiku-4-5-20251001)"
+                                    onInput=${(event) => onFieldChange('selected_model', event.target.value)}
+                                  />
+                                `
+                              : ''}
+                          `;
+                        }
+                        return html`
+                          <input
+                            value=${form.selected_model}
+                            placeholder="Enter model ID (e.g., gpt-4o)"
+                            onInput=${(event) => onFieldChange('selected_model', event.target.value)}
+                          />
+                        `;
+                      })()}
               `
             }
 

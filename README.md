@@ -23,7 +23,7 @@
 <br />
 <a href="https://discord.gg/sGdnKwB3qq" target="_blank">
   <img alt="Discord Community" src="https://img.shields.io/badge/Discord-Community-5865F2?logo=discord&labelColor=white">
-</a> <a href="https://goreportcard.com/report/github.com/HexmosTech/git-lrc" target="_blank" rel="noopener noreferrer"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/HexmosTech/git-lrc"></a>&nbsp;<a href="https://github.com/HexmosTech/git-lrc/actions/workflows/confidence.yml" target="_blank" rel="noopener noreferrer"><img alt="confidence.yml" title="confidence.yml: Minimum confidence workflow" src="https://github.com/HexmosTech/git-lrc/actions/workflows/confidence.yml/badge.svg"></a>&nbsp;<a href="https://github.com/HexmosTech/git-lrc/actions/workflows/status-doc-link-check.yml" target="_blank" rel="noopener noreferrer"><img alt="status-doc-link-check.yml" title="status-doc-link-check.yml: Status document integrity workflow" src="https://github.com/HexmosTech/git-lrc/actions/workflows/status-doc-link-check.yml/badge.svg"></a>&nbsp;<a href="https://github.com/HexmosTech/git-lrc/actions/workflows/gitleaks.yml" target="_blank" rel="noopener noreferrer"><img alt="gitleaks.yml" title="gitleaks.yml: Secret scanning workflow" src="https://github.com/HexmosTech/git-lrc/actions/workflows/gitleaks.yml/badge.svg"></a>&nbsp;<a href="https://github.com/HexmosTech/git-lrc/actions/workflows/osv-scanner.yml" target="_blank" rel="noopener noreferrer"><img alt="osv-scanner.yml" title="osv-scanner.yml: Dependency vulnerability scan" src="https://github.com/HexmosTech/git-lrc/actions/workflows/osv-scanner.yml/badge.svg"></a>&nbsp;<a href="https://github.com/HexmosTech/git-lrc/actions/workflows/govulncheck.yml" target="_blank" rel="noopener noreferrer"><img alt="govulncheck.yml" title="govulncheck.yml: Go vulnerability check" src="https://github.com/HexmosTech/git-lrc/actions/workflows/govulncheck.yml/badge.svg"></a>&nbsp;<a href="https://github.com/HexmosTech/git-lrc/actions/workflows/semgrep.yml" target="_blank" rel="noopener noreferrer"><img alt="semgrep.yml" title="semgrep.yml: Static analysis security scan" src="https://github.com/HexmosTech/git-lrc/actions/workflows/semgrep.yml/badge.svg"></a>&nbsp;<img alt="dependabot-enabled" title="dependabot-enabled: Automated dependency updates are enabled" src="./gfx/dependabot-enabled.svg">
+</a> <a href="https://goreportcard.com/report/github.com/HexmosTech/git-lrc" target="_blank" rel="noopener noreferrer"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/HexmosTech/git-lrc"></a>&nbsp;<a href="https://github.com/HexmosTech/git-lrc/actions/workflows/gitleaks.yml" target="_blank" rel="noopener noreferrer"><img alt="gitleaks.yml" title="gitleaks.yml: Secret scanning workflow" src="https://github.com/HexmosTech/git-lrc/actions/workflows/gitleaks.yml/badge.svg"></a>&nbsp;<a href="https://github.com/HexmosTech/git-lrc/actions/workflows/osv-scanner.yml" target="_blank" rel="noopener noreferrer"><img alt="osv-scanner.yml" title="osv-scanner.yml: Dependency vulnerability scan" src="https://github.com/HexmosTech/git-lrc/actions/workflows/osv-scanner.yml/badge.svg"></a>&nbsp;<a href="https://github.com/HexmosTech/git-lrc/actions/workflows/govulncheck.yml" target="_blank" rel="noopener noreferrer"><img alt="govulncheck.yml" title="govulncheck.yml: Go vulnerability check" src="https://github.com/HexmosTech/git-lrc/actions/workflows/govulncheck.yml/badge.svg"></a>&nbsp;<a href="https://github.com/HexmosTech/git-lrc/actions/workflows/semgrep.yml" target="_blank" rel="noopener noreferrer"><img alt="semgrep.yml" title="semgrep.yml: Static analysis security scan" src="https://github.com/HexmosTech/git-lrc/actions/workflows/semgrep.yml/badge.svg"></a>&nbsp;<img alt="dependabot-enabled" title="dependabot-enabled: Automated dependency updates are enabled" src="./gfx/dependabot-enabled.svg">
 </div>
 
 <br />
@@ -241,6 +241,17 @@ By default, the **first connector in the list** is used for reviews.
 
 ![LRC UI connector management preview](./gfx/git-lrc-ui.png)
 
+### Compatible API Support
+
+We also support:
+- Anthropic Compatible API
+
+To configure:
+- Select the option `Anthropic Compatible API` connector from the UI.
+- Set the base URL for the API connector by selecting from the dropdown (e.g., [`gw.claudeapi.com`](https://claudeapi.com?utm_source=git-lrc)) or entering a custom URL.
+- Enter your API key.
+- Select the Claude model to use for reviews.
+
 ## Security You Can Trust
 
 - Security is treated as a core product requirement in git-lrc.
@@ -362,7 +373,6 @@ Pick the right place based on what you need:
 - **Discord**: [discord.gg/sGdnKwB3qq](https://discord.gg/sGdnKwB3qq) - Best for joining the community, asking general Q&A, and having quick back-and-forth with the team.
 - **GitHub Discussions**: [github.com/HexmosTech/git-lrc/discussions](https://github.com/HexmosTech/git-lrc/discussions) - For in-depth idea proposals, scoping, design discussions, modification proposals, and constructive criticism.
 - **GitHub Issues**: [github.com/HexmosTech/git-lrc/issues](https://github.com/HexmosTech/git-lrc/issues) - For concrete, scoped tasks such as bugs, focused feature requests, and actionable implementation work.
-- **Contributing Guide**: See [CONTRIBUTING.md](./CONTRIBUTING.md) for contributor workflow, local setup, testing expectations, and pull request guidance.
 
 ## License
 

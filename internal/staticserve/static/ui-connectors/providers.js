@@ -35,6 +35,29 @@ export const providers = [
     name: 'Anthropic Claude',
     apiKeyPlaceholder: 'sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
   },
+  {
+    id: 'anthropic-compatible',
+    name: 'Anthropic Compatible API',
+    requiresBaseURL: true,
+    baseURLPresets: [
+      {
+        label: 'ClaudeAPI (gw.claudeapi.com)',
+        value: 'https://gw.claudeapi.com/v1',
+        models: ['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-8'],
+      },
+    ],
+    baseURLPlaceholder: 'https://your-anthropic-compatible-endpoint.com',
+    apiKeyPlaceholder: 'sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    modelPresets: [
+      'claude-haiku-4-5-20251001',
+      'claude-sonnet-4-6',
+      'claude-opus-4-8',
+      'claude-3-5-sonnet-20241022',
+      'claude-3-5-haiku-20241022',
+      'claude-3-opus-20240229',
+      'claude-3-haiku-20240307',
+    ],
+  },
 ];
 
 export function defaultForm() {

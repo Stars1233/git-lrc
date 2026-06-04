@@ -96,4 +96,5 @@ type CreateConnectorRequest struct {
 	ConnectorName string `json:"connector_name"`
 	SelectedModel string `json:"selected_model"`
 	DisplayOrder  int    `json:"display_order"`
+	BaseURL       string `json:"base_url,omitempty"`
 }
