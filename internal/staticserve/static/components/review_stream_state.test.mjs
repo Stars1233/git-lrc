@@ -108,6 +108,21 @@ test('appendStreamedCommentsToFiles appends matching comments without mutating i
     assert.equal(nextFiles[1].comments[0].content, 'new-b');
 });
 
+test('appendStreamedCommentsToFiles preserves PascalCase comments from API payloads', () => {
+    const files = [
+        { FilePath: 'a.go', Comments: [{ Line: 1, Content: 'existing', Severity: 'info', Category: 'review' }] },
+    ];
+
+    const nextFiles = appendStreamedCommentsToFiles(files, [
+        { file_path: 'a.go', line: 2, content: 'streamed', severity: 'warning', category: 'review' },
+    ]);
+
+    assert.equal(files[0].comments, undefined);
+    assert.equal(nextFiles[0].comments.length, 2);
+    assert.equal(nextFiles[0].comments[0].Content, 'existing');
+    assert.equal(nextFiles[0].comments[1].content, 'streamed');
+});
+
 test('inferReviewStatusFromEvents prefers explicit status and falls back to completion', () => {
     assert.equal(inferReviewStatusFromEvents([
         { type: 'completion', data: { resultSummary: 'ok' } },

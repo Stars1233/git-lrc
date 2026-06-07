@@ -142,7 +142,9 @@ export function appendStreamedCommentsToFiles(files, incomingComments) {
     }
 
     const nextFiles = files.map((file) => {
-        const existingComments = Array.isArray(file?.comments) ? file.comments : [];
+        const lowerComments = Array.isArray(file?.comments) ? file.comments : [];
+        const pascalComments = Array.isArray(file?.Comments) ? file.Comments : [];
+        const existingComments = lowerComments.length > 0 ? lowerComments : pascalComments;
         return {
             ...file,
             comments: [...existingComments]
