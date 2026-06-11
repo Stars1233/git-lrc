@@ -273,18 +273,21 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 		}
 	}
 
-	// Determine repo name
-	repoName := opts.RepoName
-	if repoName == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get current directory: %w", err)
-		}
-		repoName = filepath.Base(cwd)
+	repoRootPath, repoRootErr := resolveRuntimeRepositoryPath()
+	if repoRootErr != nil && verbose {
+		log.Printf("Repository path unavailable: %v", repoRootErr)
+	}
+
+	repoName, err := resolveRuntimeRepositoryName(opts.RepoName, repoRootPath)
+	if err != nil {
+		return err
 	}
 
 	if verbose {
 		log.Printf("Repository name: %s", repoName)
+		if repoRootPath != "" {
+			log.Printf("Repository path: %s", repoRootPath)
+		}
 		log.Printf("API URL: %s", config.APIURL)
 	}
 
@@ -493,6 +496,9 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 		currentReviewState = NewReviewState(reviewID, filesFromDiff, useDecisionUI, isPostCommitReview, initialMsg, config.APIURL)
 		if submitResp.FriendlyName != "" {
 			currentReviewState.FriendlyName = submitResp.FriendlyName
+		}
+		if repoRootPath != "" {
+			currentReviewState.RepositoryPath = repoRootPath
 		}
 		if submissionFailed {
 			currentReviewState.Status = "failed"

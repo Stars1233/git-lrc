@@ -51,6 +51,7 @@ func ConvertToJSONData(data *HTMLTemplateData) *JSONTemplateData {
 
 	return &JSONTemplateData{
 		GeneratedTime:      data.GeneratedTime,
+		RepositoryPath:     data.RepositoryPath,
 		Summary:            data.Summary,
 		Status:             data.Status,
 		TotalFiles:         data.TotalFiles,

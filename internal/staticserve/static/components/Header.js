@@ -9,6 +9,9 @@ const SESSION_REVIEW_ID = new URLSearchParams(window.location.search).get('r') |
 
 const GITHUB_URL = 'https://github.com/HexmosTech/git-lrc';
 const LIVEREVIEW_URL = 'https://hexmos.com/livereview/';
+const REPOSITORY_PATH_MAX_WIDTH_VIEWPORT = '56vw';
+const REPOSITORY_PATH_MAX_WIDTH_PIXELS = '780px';
+const REPOSITORY_PATH_MAX_WIDTH = `min(${REPOSITORY_PATH_MAX_WIDTH_VIEWPORT}, ${REPOSITORY_PATH_MAX_WIDTH_PIXELS})`;
 
 export async function createHeader() {
     const { html, useState, useEffect, useRef } = await waitForPreact();
@@ -102,7 +105,7 @@ export async function createHeader() {
 
     // ── brand text click popup ────────────────────────────────────────────────
 
-    function BrandButton({ friendlyName, generatedTime }) {
+    function BrandButton({ friendlyName, generatedTime, repositoryPath }) {
         const { isOpen, open, closeSoon } = useHoverPopover();
         const [copied, setCopied] = useState(false);
         const copyTimer = useRef(null);
@@ -126,6 +129,14 @@ export async function createHeader() {
                         ${friendlyName && html`<span style="color:#c9d5e8;font-size:11px;font-weight:600;">Run: ${friendlyName}</span>`}
                         ${friendlyName && generatedTime && html`<span style="color:#3a4a60;font-size:10px;">·</span>`}
                         ${generatedTime && html`<span style="color:#4a6080;font-size:11px;">${generatedTime}</span>`}
+                    </div>
+                `}
+                ${repositoryPath && html`
+                    <div
+                        title=${repositoryPath}
+                        style=${`margin-top:4px;max-width:${REPOSITORY_PATH_MAX_WIDTH};color:#5d708d;font-size:10px;line-height:1.35;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;word-break:break-all;`}
+                    >
+                        Repo: ${repositoryPath}
                     </div>
                 `}
                 ${isOpen && html`
@@ -374,13 +385,13 @@ export async function createHeader() {
 
     // ── header ────────────────────────────────────────────────────────────────
 
-    return function Header({ generatedTime, friendlyName }) {
+    return function Header({ generatedTime, friendlyName, repositoryPath }) {
         return html`
             <div class="header">
                 <div class="header-top-row">
                     <div class="brand">
                         <${LogoButton} />
-                        <${BrandButton} friendlyName=${friendlyName} generatedTime=${generatedTime} />
+                        <${BrandButton} friendlyName=${friendlyName} generatedTime=${generatedTime} repositoryPath=${repositoryPath} />
                     </div>
                     <div class="header-actions">
                         <${UsageChip} endpoint="/api/runtime/usage-chip" />

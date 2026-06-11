@@ -2,7 +2,9 @@ package result
 
 // HTMLTemplateData contains all data needed for rendering review results.
 type HTMLTemplateData struct {
-	GeneratedTime      string
+	GeneratedTime string
+	// RepositoryPath is the absolute local repository worktree root when available.
+	RepositoryPath     string
 	Summary            string
 	Status             string
 	TotalFiles         int
@@ -55,7 +57,9 @@ type HTMLCommentData struct {
 
 // JSONTemplateData is the structure serialized for the frontend app.
 type JSONTemplateData struct {
-	GeneratedTime      string         `json:"GeneratedTime"`
+	GeneratedTime string `json:"GeneratedTime"`
+	// RepositoryPath is the absolute local repository worktree root when available.
+	RepositoryPath     string         `json:"RepositoryPath,omitempty"`
 	Summary            string         `json:"Summary"`
 	Status             string         `json:"Status"`
 	TotalFiles         int            `json:"TotalFiles"`

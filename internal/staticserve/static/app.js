@@ -1017,6 +1017,7 @@ async function initApp() {
                     <${Header} 
                         generatedTime=${reviewData?.generatedTime || reviewData?.GeneratedTime}
                         friendlyName=${reviewData?.friendlyName || reviewData?.FriendlyName}
+                        repositoryPath=${reviewData?.repositoryPath || reviewData?.RepositoryPath}
                     />
                     
                     ${showLoader && html`
