@@ -29,7 +29,7 @@ function normalizeEventId(event, index) {
 
 function normalizeSeverity(rawSeverity) {
     const severity = String(rawSeverity || 'info').trim().toLowerCase();
-    if (severity === 'critical' || severity === 'error' || severity === 'warning') {
+    if (severity === 'critical' || severity === 'warning') {
         return severity;
     }
     return 'info';

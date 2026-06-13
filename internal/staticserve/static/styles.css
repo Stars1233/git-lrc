@@ -2355,11 +2355,6 @@ body {
   color: #fef08a;
   border: 1px solid rgba(204, 167, 0, 0.35);
 }
-.badge-error {
-  background: rgba(227, 127, 46, 0.2);
-  color: #fdd0a2;
-  border: 1px solid rgba(227, 127, 46, 0.35);
-}
 .badge-critical {
   background: rgba(241, 76, 76, 0.25);
   color: #fecaca;
@@ -3478,12 +3473,6 @@ body {
   border-color: rgba(241, 76, 76, 0.5);
   color: #fecaca;
   background: rgba(241, 76, 76, 0.14);
-}
-
-.issue-filter-chip.severity-error.active {
-  border-color: rgba(227, 127, 46, 0.52);
-  color: #fdd0a2;
-  background: rgba(227, 127, 46, 0.14);
 }
 
 .issue-filter-chip.severity-warning.active {

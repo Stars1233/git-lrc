@@ -27,7 +27,6 @@ export function filePathToId(filePath) {
 export function getBadgeClass(severity) {
     const sev = (severity || '').toLowerCase();
     if (sev === 'critical') return 'badge-critical';
-    if (sev === 'error') return 'badge-error';
     if (sev === 'warning') return 'badge-warning';
     return 'badge-info';
 }

@@ -1,4 +1,4 @@
-export const DEFAULT_SEVERITIES = ['critical', 'error', 'warning', 'info'];
+export const DEFAULT_SEVERITIES = ['critical', 'warning', 'info'];
 export const CONFIDENCE_ORDER = ['high', 'medium', 'low'];
 
 export const SELECTION_FIELDS = Object.freeze({

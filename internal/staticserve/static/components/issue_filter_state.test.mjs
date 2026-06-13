@@ -133,7 +133,6 @@ test('buildIssueFacetOptions narrows subcategories by the enabled main-category 
         options.severities.map((option) => [option.value, option.count]),
         [
             ['critical', 1],
-            ['error', 0],
             ['warning', 1],
             ['info', 0],
         ],

@@ -167,7 +167,6 @@ export function countFileVisibleIssues(file, filters, hiddenCommentKeys) {
 export function countIssuesByFilters(files, filters, hiddenCommentKeys) {
     const severityCounts = {
         critical: 0,
-        error: 0,
         warning: 0,
         info: 0,
     };

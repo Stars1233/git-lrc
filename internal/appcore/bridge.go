@@ -114,7 +114,7 @@ func buildFakeCompletedResultForFiles(baseFiles []reviewmodel.DiffReviewFileResu
 
 	if totalComments > 0 {
 		result.Summary = fmt.Sprintf(
-			"%s\n\n## Synthetic Coverage\n\n- Generated %d synthetic comment(s) across %d file(s)\n- Covers Critical, Error, Warning, and Info severities across targeted files",
+			"%s\n\n## Synthetic Coverage\n\n- Generated %d synthetic comment(s) across %d file(s)\n- Covers Critical, Warning, and Info severities across targeted files",
 			strings.TrimSpace(result.Summary),
 			totalComments,
 			len(files),
@@ -152,7 +152,7 @@ var perFileCommentSpecs = map[string][]syntheticCommentSpec{
 	"edge_cases.txt": {
 		{
 			linePickIndex: 0,
-			severity:      "Error",
+			severity:      "Critical",
 			confidence:    "High",
 			typeName:      "Bug",
 			category:      "Logic",
@@ -161,7 +161,7 @@ var perFileCommentSpecs = map[string][]syntheticCommentSpec{
 		},
 		{
 			linePickIndex: -1,
-			severity:      "Error",
+			severity:      "Warning",
 			confidence:    "Medium",
 			typeName:      "Bug",
 			category:      "Logic",
