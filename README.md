@@ -33,9 +33,18 @@
 
 ---
 
-AI agents write code fast. They also _silently remove logic_, change behavior, and introduce bugs -- without telling you. You often find out in production.
+GenAI today is a **race car without brakes**. It accelerates fast -- you describe something, and large blocks of code appear instantly. But AI agents _silently break things_: they remove logic, relax constraints, introduce expensive cloud calls, leak credentials, and change behavior -- without telling you. You often find out in production.
 
-**`git-lrc` fixes this.** It hooks into `git commit` and reviews every diff _before_ it lands. 60-second setup. Completely free.
+**`git-lrc` is your braking system.** It hooks into `git commit` and runs an AI review on every diff _before_ it lands. 60-second setup. Completely free.
+
+**At a glance:** 10 risk categories &middot; 100+ failure patterns tracked &middot; every commit scanned automatically.
+
+```bash
+# Try it now (Linux/macOS)
+curl -L https://hexmos.com/ipm-install | bash && ipm i HexmosTech/git-lrc
+```
+
+Windows, alternative installs, and full setup walkthrough: see [Get Started](#get-started).
 
 ## See It In Action
 
@@ -46,12 +55,14 @@ https://github.com/user-attachments/assets/cc4aa598-a7e3-4a1d-998c-9f2ba4b4c66e
 
 ## Why
 
-- 🤖 **AI agents silently break things.** Code removed. Logic changed. Edge cases gone. You won't notice until production.
-- 🔍 **Catch it before it ships.** AI-powered inline comments show you _exactly_ what changed and what looks wrong.
-- 🔁 **Build a habit, ship better code.** Regular review → fewer bugs → more robust code → better results in your team.
-- ⏰ **Why not wait for a PR?** By PR time, the faulty code is already committed, pushed, and visible. That is too late for issues you could have fixed yourself while the change was still fresh, without pulling team attention into avoidable cleanup.
-- 🧩 **Why not rely on IDE extensions?** Extensions are convenience, not a universal trigger. An engineer may choose to run them or not run them, and teams do not share one editor.
-- 🔗 **Why commit?** Commit is the sweet spot: early enough to catch problems before they enter permanent git history, but not so early that review depends on individual discretion or special tooling.
+- **AI agents silently break things.** Code removed. Logic changed. Edge cases gone. You won't notice until production.
+- **Catch it before it ships.** AI-powered inline comments show you _exactly_ what changed and what looks wrong.
+- **Build a habit, ship better code.** Regular review → fewer bugs → more robust code → better results for your team.
+- **Why not wait for a PR?** By PR time, the faulty code is already committed, pushed, and visible. That is too late for issues you could have fixed yourself while the change was still fresh, without pulling team attention into avoidable cleanup.
+- **Why not rely on IDE extensions?** Extensions are convenience, not a universal trigger. An engineer may choose to run them or not, and teams do not share one editor.
+- **Why commit?** Commit is the sweet spot: early enough to catch problems before they enter permanent git history, but not so early that review depends on individual discretion or special tooling.
+- **Git is the common denominator.** You can't force every engineer onto one IDE or one AI assistant -- but everyone commits. `git-lrc` plugs into the one workflow step every team already shares.
+- **Built on habit, not hype.** No new dashboard to check, no new ritual to adopt. It rides the commit you were already going to make.
 
 ## Get Started
 
@@ -91,9 +102,18 @@ curl -fsSL https://git.new/lrc-install | bash
 
 Binary installed. Hooks set up globally. Done.
 
-### Also Included: Claude Code Plugin
+### Also Included: claude-lrc for Claude Code
 
-🤝 We also bundle [claude-lrc](https://github.com/HexmosTech/claude-lrc), the Claude Code companion. Use **`git-lrc`** when you want editor-independent, commit-time enforcement across repos and tools. Use **`claude-lrc`** when you want natural-language and slash-command control directly inside Claude Code.
+Installing `git-lrc` also gives you **[claude-lrc](https://github.com/HexmosTech/claude-lrc)** -- the same review, vouch, and skip workflow, available as slash commands right inside Claude Code. No separate install, no leaving the chat.
+
+| What you want            | How                  |
+| ------------------------- | -------------------- |
+| Natural language          | `review with lrc`    |
+| Slash command              | `/lrc:review`         |
+| Quality vouch              | `/lrc:vouch`          |
+| Intentional bypass          | `/lrc:skip`           |
+
+Use **`git-lrc`** when you want editor-independent, commit-time enforcement across repos and tools. Use **`claude-lrc`** when you want natural-language and slash-command control directly inside Claude Code.
 
 ### Setup
 
@@ -112,6 +132,17 @@ Two steps, both open in your browser:
 
 **~1 minute. One-time setup, machine-wide.** After this, _every git repo_ on your machine triggers review on commit. No per-repo config needed.
 
+## Pricing
+
+Predictable, unlimited, LOC-based. 30k LOC free every month. Premium starts at $32 for 100k LOC. Paid plans keep you unlimited.
+
+| Tier                  | What you get                                                  | Notes                                                          |
+| --------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **1. Free Individual** | Install `git-lrc` and start with 30k LOC per month             | Bring your own AI keys. Keep `git-lrc` and the VS Code extension.   |
+| **2. Premium**          | Upgrade when 30k LOC is not enough                              | Starts at $32 for 100k LOC. Scales by workload, not by seat.        |
+| **3. Enterprise**       | Move further for privacy and deployment control                | Self-hosting, SSO, custom domains, and tighter data control.        |
+
+No credit card required for the free tier. See the [full pricing page](https://hexmos.com/livereview/git-lrc/pricing/) for details.
 
 ## How It Works
 
@@ -139,14 +170,14 @@ https://github.com/user-attachments/assets/ae063e39-379f-4815-9954-f0e2ab5b9cde
 
 ### The Review UI
 
-- 📄 **GitHub-style diff** — color-coded additions/deletions
-- 💬 **Inline AI comments** — at the exact lines that matter, with severity badges
-- 📝 **Review summary** — high-level overview of what the AI found
-- 📁 **Staged file list** — see all staged files at a glance, jump between them
-- 📊 **Diff summary** — lines added/removed per file for a quick sense of change scope
-- 📋 **Copy issues** — one click to copy all AI-flagged issues, ready to paste back into your AI agent
-- 🔄 **Cycle through issues** — navigate between comments one by one without scrolling
-- 📜 **Event log** — track review events, iterations, and status changes in one place
+- **GitHub-style diff** — color-coded additions/deletions
+- **Inline AI comments** — at the exact lines that matter, with severity badges
+- **Review summary** — high-level overview of what the AI found
+- **Staged file list** — see all staged files at a glance, jump between them
+- **Diff summary** — lines added/removed per file for a quick sense of change scope
+- **Copy issues** — one click to copy all AI-flagged issues, ready to paste back into your AI agent
+- **Cycle through issues** — navigate between comments one by one without scrolling
+- **Event log** — track review events, iterations, and status changes in one place
 
 https://github.com/user-attachments/assets/b579d7c6-bdf6-458b-b446-006ca41fe47d
 
@@ -154,9 +185,9 @@ https://github.com/user-attachments/assets/b579d7c6-bdf6-458b-b446-006ca41fe47d
 
 | Action               | What happens                           |
 | -------------------- | -------------------------------------- |
-| ✅ **Commit**        | Accept and commit the reviewed changes |
-| 🚀 **Commit & Push** | Commit and push to remote in one step  |
-| ⏭️ **Skip**          | Abort the commit — go fix issues first |
+| **Commit**           | Accept and commit the reviewed changes |
+| **Commit & Push**    | Commit and push to remote in one step  |
+| **Skip**             | Abort the commit — go fix issues first |
 
 ```
 📎 Screenshot: Pre-commit bar showing Commit / Commit & Push / Skip buttons
@@ -340,9 +371,9 @@ If it's sent to the model, you can see it first.
 
 |                       | **Review**                  | **Vouch**                       | **Skip**                  |
 | --------------------- | --------------------------- | ------------------------------- | ------------------------- |
-| AI reviews the diff?  | ✅ Yes                      | ❌ No                           | ❌ No                     |
-| Takes responsibility? | ✅ Yes                      | ✅ Yes, explicitly              | ⚠️ No                     |
-| Tracks iterations?    | ✅ Yes                      | ✅ Records prior coverage       | ❌ No                     |
+| AI reviews the diff?  | Yes                         | No                              | No                        |
+| Takes responsibility? | Yes                         | Yes, explicitly                | No                        |
+| Tracks iterations?    | Yes                         | Records prior coverage         | No                        |
 | Git log message       | `ran (iter:N, coverage:X%)` | `vouched (iter:N, coverage:X%)` | `skipped`                 |
 | When to use           | Each review cycle           | Done iterating, ready to commit | Not reviewing this commit |
 
