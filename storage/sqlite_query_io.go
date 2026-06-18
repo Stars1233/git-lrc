@@ -22,6 +22,35 @@ func OpenInMemorySQLite() (*sql.DB, error) {
 	return db, nil
 }
 
+// BulkInsert inserts many rows under a single transaction with a prepared
+// statement — far faster than autocommitting each row (matters for large repos).
+func BulkInsert(db *sql.DB, query string, rows [][]any) error {
+	if db == nil {
+		return fmt.Errorf("failed bulk insert: nil database handle")
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("failed to prepare insert: %w", err)
+	}
+	defer func() { _ = stmt.Close() }()
+
+	for _, args := range rows {
+		if _, err := stmt.Exec(args...); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("failed bulk insert exec: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit insert transaction: %w", err)
+	}
+	return nil
+}
+
 // QueryRows runs a read-only query and returns the column names plus each row
 // stringified (NULL -> ""). Keeping database/sql access inside the storage
 // boundary lets callers render results without importing database/sql.

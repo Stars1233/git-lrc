@@ -354,17 +354,43 @@ func BuildApp(version, buildTime, gitCommit, reviewMode string, baseFlags, debug
 			{
 				Name:  "query",
 				Usage: "Query LiveReview history with SQL or a saved alias (e.g. 'lrc query stats')",
-				Description: `Runs a SQL query (or a saved alias) against an in-memory table of this
-repo's review history, built from commit trailers.
+				Description: `Builds an in-memory SQLite table of this repo's review history (parsed
+from the 'LiveReview Pre-Commit Check' commit trailers) and runs SQL — or a
+saved alias — against it. Output as a table or, with --json, machine-readable.
 
-   lrc query                     # default 'stats' alias
-   lrc query stats --json        # same data as JSON
-   lrc query "SELECT author, COUNT(*) FROM review_log GROUP BY author"
-   lrc query --add "SELECT ..." --name myreport   # save an alias
-   lrc query myreport            # run the saved alias
+TABLE: review_log (one row per commit)
+   hash         TEXT     full commit hash
+   short_hash   TEXT     abbreviated hash
+   author       TEXT     commit author name
+   email        TEXT     commit author email
+   date         TEXT     author date, ISO-8601 (sortable, e.g. 2026-06-17T10:30:00Z)
+   branch       TEXT     branch the query ran from
+   subject      TEXT     commit subject (first line)
+   action       TEXT     'reviewed' | 'vouched' | 'skipped' | 'none'
+   iterations   INTEGER  review iterations (0 if none)
+   coverage     INTEGER  review coverage percent 0-100 (0 if none)
 
-Columns in review_log: hash, short_hash, author, email, date, branch,
-subject, action, iterations, coverage.`,
+ALIASES: built-ins (stats, by-author, recent) plus your own, saved in
+~/.lrc/queries.toml. 'lrc query' with no args runs the 'stats' alias.
+
+EXAMPLES
+   lrc query                              # default summary (the 'stats' alias)
+   lrc query stats --json                 # same data, as JSON
+   lrc query list                         # show all aliases
+   lrc query view stats                   # show an alias's SQL
+
+   # Was a specific commit reviewed? (incident forensics)
+   lrc query "SELECT short_hash, action, iterations, coverage FROM review_log WHERE hash LIKE 'a1b2c3%'"
+
+   # Per-author review effort
+   lrc query "SELECT author, COUNT(*) AS commits, SUM(action='reviewed') AS reviewed FROM review_log GROUP BY author ORDER BY commits DESC"
+
+   # Coverage only on reviewed commits
+   lrc query "SELECT ROUND(AVG(coverage),1) AS avg_cov FROM review_log WHERE action='reviewed'"
+
+   # Save and reuse your own query
+   lrc query --add "SELECT date, subject FROM review_log WHERE action='skipped'" --name skipped
+   lrc query skipped --json`,
 				Flags: []cli.Flag{
 					&cli.BoolFlag{Name: "json", Usage: "output machine-readable JSON"},
 					&cli.StringFlag{Name: "add", Usage: "save the given SQL as an alias (requires --name)"},
