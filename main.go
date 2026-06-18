@@ -10,6 +10,7 @@ import (
 	"github.com/HexmosTech/git-lrc/internal/appui"
 	"github.com/HexmosTech/git-lrc/internal/reviewdb"
 	"github.com/HexmosTech/git-lrc/internal/reviewopts"
+	"github.com/HexmosTech/git-lrc/internal/reviewquery"
 	"github.com/HexmosTech/git-lrc/internal/selfupdate"
 	"github.com/urfave/cli/v2"
 )
@@ -84,6 +85,10 @@ func main() {
 		RunConfigInit:                   appcore.RunConfigInit,
 		RunConfigCheck:                  appcore.RunConfigCheck,
 		RunConfigPreview:                appcore.RunConfigPreview,
+		RunQuery:                        reviewquery.RunQuery,
+		RunQueryList:                    reviewquery.RunQueryList,
+		RunQueryView:                    reviewquery.RunQueryView,
+		RunQueryDelete:                  reviewquery.RunQueryDelete,
 	})
 
 	if err := app.Run(os.Args); err != nil {

@@ -36,31 +36,35 @@ do not write a commit attestation or offer to commit/push.`
 
 // Handlers contains injected command actions so CLI wiring can live outside main.
 type Handlers struct {
-	RunReviewSimple       cli.ActionFunc
-	RunReviewDebug        cli.ActionFunc
-	RunEnsure             cli.ActionFunc
-	RunUninstall          cli.ActionFunc
-	RunHooksInstall       cli.ActionFunc
-	RunHooksUninstall     cli.ActionFunc
-	RunHooksEnable        cli.ActionFunc
-	RunHooksDisable       cli.ActionFunc
-	RunHooksStatus        cli.ActionFunc
-	RunSelfUpdate         cli.ActionFunc
-	RunReviewCleanup      cli.ActionFunc
-	RunAttestationTrailer cli.ActionFunc
-	RunSetup              cli.ActionFunc
-	RunUI                 cli.ActionFunc
-	RunUsageInspect                cli.ActionFunc
-	RunInternalClaudePreToolUse   cli.ActionFunc
-	RunInternalClaudeRunCommit    cli.ActionFunc
-	RunInternalClaudeSetupStart   cli.ActionFunc
-	RunInternalClaudeSetupWorker  cli.ActionFunc
+	RunReviewSimple                 cli.ActionFunc
+	RunReviewDebug                  cli.ActionFunc
+	RunEnsure                       cli.ActionFunc
+	RunUninstall                    cli.ActionFunc
+	RunHooksInstall                 cli.ActionFunc
+	RunHooksUninstall               cli.ActionFunc
+	RunHooksEnable                  cli.ActionFunc
+	RunHooksDisable                 cli.ActionFunc
+	RunHooksStatus                  cli.ActionFunc
+	RunSelfUpdate                   cli.ActionFunc
+	RunReviewCleanup                cli.ActionFunc
+	RunAttestationTrailer           cli.ActionFunc
+	RunSetup                        cli.ActionFunc
+	RunUI                           cli.ActionFunc
+	RunUsageInspect                 cli.ActionFunc
+	RunInternalClaudePreToolUse     cli.ActionFunc
+	RunInternalClaudeRunCommit      cli.ActionFunc
+	RunInternalClaudeSetupStart     cli.ActionFunc
+	RunInternalClaudeSetupWorker    cli.ActionFunc
 	RunInternalClaudeSetupSubmitKey cli.ActionFunc
-	RunInternalClaudeSetupStatus  cli.ActionFunc
-	RunRemoveAttestation          cli.ActionFunc
-	RunConfigInit                 cli.ActionFunc
-	RunConfigCheck                cli.ActionFunc
-	RunConfigPreview              cli.ActionFunc
+	RunInternalClaudeSetupStatus    cli.ActionFunc
+	RunRemoveAttestation            cli.ActionFunc
+	RunConfigInit                   cli.ActionFunc
+	RunConfigCheck                  cli.ActionFunc
+	RunConfigPreview                cli.ActionFunc
+	RunQuery                        cli.ActionFunc
+	RunQueryList                    cli.ActionFunc
+	RunQueryView                    cli.ActionFunc
+	RunQueryDelete                  cli.ActionFunc
 }
 
 // BuildApp constructs the full CLI app with all command wiring.
@@ -344,6 +348,44 @@ func BuildApp(version, buildTime, gitCommit, reviewMode string, baseFlags, debug
 						Name:   "preview",
 						Usage:  "Show the rules bundle LiveReview will use (offline)",
 						Action: h.RunConfigPreview,
+					},
+				},
+			},
+			{
+				Name:  "query",
+				Usage: "Query LiveReview history with SQL or a saved alias (e.g. 'lrc query stats')",
+				Description: `Runs a SQL query (or a saved alias) against an in-memory table of this
+repo's review history, built from commit trailers.
+
+   lrc query                     # default 'stats' alias
+   lrc query stats --json        # same data as JSON
+   lrc query "SELECT author, COUNT(*) FROM review_log GROUP BY author"
+   lrc query --add "SELECT ..." --name myreport   # save an alias
+   lrc query myreport            # run the saved alias
+
+Columns in review_log: hash, short_hash, author, email, date, branch,
+subject, action, iterations, coverage.`,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{Name: "json", Usage: "output machine-readable JSON"},
+					&cli.StringFlag{Name: "add", Usage: "save the given SQL as an alias (requires --name)"},
+					&cli.StringFlag{Name: "name", Usage: "alias name to save with --add"},
+				},
+				Action: h.RunQuery,
+				Subcommands: []*cli.Command{
+					{
+						Name:   "list",
+						Usage:  "List saved and built-in query aliases",
+						Action: h.RunQueryList,
+					},
+					{
+						Name:   "view",
+						Usage:  "Print the SQL behind an alias",
+						Action: h.RunQueryView,
+					},
+					{
+						Name:   "delete",
+						Usage:  "Delete a saved alias",
+						Action: h.RunQueryDelete,
 					},
 				},
 			},
