@@ -142,6 +142,8 @@ func runInternalClaudeSetupStart(_ *cli.Context) error {
 	})
 
 	devNull, _ := os.OpenFile(os.DevNull, os.O_RDWR, 0)
+	// Safe: re-invokes this same lrc binary (os.Executable) with a fixed subcommand.
+	// nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command
 	workerCmd := exec.Command(lrcExe, "internal", "claude", "setup", "worker")
 	if devNull != nil {
 		workerCmd.Stdin = devNull
@@ -212,6 +214,8 @@ func runInternalClaudeSetupWorker(_ *cli.Context) error {
 		return fmt.Errorf("lrc setup worker: pipe: %w", err)
 	}
 
+	// Safe: re-invokes this same lrc binary (os.Executable) with a fixed subcommand.
+	// nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command
 	proc := exec.Command(lrcExe, "setup")
 	proc.Env = setupCommandEnv()
 	proc.Stdout = pw

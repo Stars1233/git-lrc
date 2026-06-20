@@ -1,6 +1,7 @@
 package appcore
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"encoding/base64"
@@ -29,6 +30,7 @@ import (
 	"github.com/HexmosTech/git-lrc/interactive/input"
 	"github.com/HexmosTech/git-lrc/internal/appcore/decisionruntime"
 	"github.com/HexmosTech/git-lrc/internal/decisionflow"
+	"github.com/HexmosTech/git-lrc/internal/lrcrules"
 	"github.com/HexmosTech/git-lrc/internal/reviewapi"
 	"github.com/HexmosTech/git-lrc/internal/reviewdb"
 	"github.com/HexmosTech/git-lrc/internal/reviewhtml"
@@ -137,8 +139,10 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 
 	// Determine if this is a post-commit review (reviewing already-committed code, read-only)
 	// vs a pre-commit review (reviewing staged changes before commit, can commit from UI)
-	// When --commit flag is used, we're always reviewing historical commits (read-only mode)
-	isPostCommitReview := opts.DiffSource == "commit"
+	// When --commit or --range is used, we're always reviewing a diff between
+	// existing refs (read-only mode) — there's nothing in the working tree to
+	// commit, and no per-tree attestation applies.
+	isPostCommitReview := opts.DiffSource == "commit" || opts.DiffSource == "range"
 	useBlockingReview := opts.BlockingReview && !isPostCommitReview
 	deferCommit := opts.Precommit || useBlockingReview
 
@@ -273,18 +277,21 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 		}
 	}
 
-	// Determine repo name
-	repoName := opts.RepoName
-	if repoName == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get current directory: %w", err)
-		}
-		repoName = filepath.Base(cwd)
+	repoRootPath, repoRootErr := resolveRuntimeRepositoryPath()
+	if repoRootErr != nil && verbose {
+		log.Printf("Repository path unavailable: %v", repoRootErr)
+	}
+
+	repoName, err := resolveRuntimeRepositoryName(opts.RepoName, repoRootPath)
+	if err != nil {
+		return err
 	}
 
 	if verbose {
 		log.Printf("Repository name: %s", repoName)
+		if repoRootPath != "" {
+			log.Printf("Repository path: %s", repoRootPath)
+		}
 		log.Printf("API URL: %s", config.APIURL)
 	}
 
@@ -300,6 +307,37 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 		return fmt.Errorf("no diff content collected")
 	}
 
+	// Apply .lrc/ignore (if present) to the collected diff before zipping it
+	// up, so ignored files are never sent to LiveReview for review or billing.
+	if repoRootPath != "" {
+		lrcDir, ok, lrcErr := lrcrules.Load(repoRootPath)
+		if lrcErr != nil {
+			log.Printf("Warning: failed to load .lrc directory: %v", lrcErr)
+		} else if ok {
+			patterns, patErr := lrcrules.LoadIgnorePatterns(lrcDir)
+			if patErr != nil {
+				log.Printf("Warning: failed to read .lrc/ignore: %v", patErr)
+			} else if len(patterns) > 0 {
+				filtered, excluded := lrcrules.FilterDiff(diffContent, patterns)
+				if len(excluded) > 0 {
+					if len(filtered) == 0 {
+						fmt.Printf("LiveReview: no diff to submit -- %d file(s) excluded by .lrc/ignore: %s\n",
+							len(excluded), formatExcludedFiles(excluded))
+						if !isPostCommitReview {
+							if err := ensureAttestationFull(attestationPayload{Action: "skipped"}, verbose, &attestationWritten); err != nil {
+								return err
+							}
+						}
+						return nil
+					}
+					fmt.Printf("LiveReview: excluding %d file(s) via .lrc/ignore: %s\n",
+						len(excluded), formatExcludedFiles(excluded))
+					diffContent = filtered
+				}
+			}
+		}
+	}
+
 	var fakeBaseFiles []reviewmodel.DiffReviewFileResult
 	if fakeMode {
 		fakeBaseFiles, err = parseDiffToFiles(diffContent)
@@ -312,8 +350,24 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 		log.Printf("Collected %d bytes of diff content", len(diffContent))
 	}
 
-	// Create ZIP archive
-	zipData, err := reviewapi.CreateZipArchive(diffContent)
+	// Create ZIP archive, including the raw .lrc/ tree (if present) so
+	// LiveReview can apply Repository Rules.
+	var lrcExtras map[string][]byte
+	if repoRootPath != "" {
+		var lrcWarnings []string
+		lrcExtras, lrcWarnings, err = lrcrules.CollectZipExtras(repoRootPath)
+		if err != nil {
+			log.Printf("Warning: failed to collect .lrc/ files: %v", err)
+		}
+		for _, w := range lrcWarnings {
+			log.Printf("Warning: .lrc/ %s", w)
+		}
+		if verbose && len(lrcExtras) > 0 {
+			log.Printf("Including %d .lrc/ file(s) in review bundle", len(lrcExtras))
+		}
+	}
+
+	zipData, err := reviewapi.CreateZipArchiveWithExtras(diffContent, lrcExtras)
 	if err != nil {
 		return fmt.Errorf("failed to create zip archive: %w", err)
 	}
@@ -493,6 +547,9 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 		currentReviewState = NewReviewState(reviewID, filesFromDiff, useDecisionUI, isPostCommitReview, initialMsg, config.APIURL)
 		if submitResp.FriendlyName != "" {
 			currentReviewState.FriendlyName = submitResp.FriendlyName
+		}
+		if repoRootPath != "" {
+			currentReviewState.RepositoryPath = repoRootPath
 		}
 		if submissionFailed {
 			currentReviewState.Status = "failed"
@@ -1525,6 +1582,19 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 	return nil
 }
 
+// maxExcludedFilesListed caps how many .lrc/ignore-excluded file paths are
+// printed by name before the rest are summarized as "and N more", so a
+// large ignore list doesn't produce an unreadable wall of text.
+const maxExcludedFilesListed = 10
+
+func formatExcludedFiles(excluded []string) string {
+	if len(excluded) <= maxExcludedFilesListed {
+		return strings.Join(excluded, ", ")
+	}
+	shown := excluded[:maxExcludedFilesListed]
+	return fmt.Sprintf("%s, and %d more", strings.Join(shown, ", "), len(excluded)-maxExcludedFilesListed)
+}
+
 func collectDiffWithOptions(opts reviewopts.Options) ([]byte, error) {
 	diffSource := opts.DiffSource
 	verbose := opts.Verbose
@@ -1750,6 +1820,18 @@ func renderPretty(result *reviewmodel.DiffReviewResponse) error {
 			if comment.Category != "" {
 				fmt.Printf(" (%s)", comment.Category)
 			}
+			if comment.Confidence != "" || comment.Type != "" || comment.Subcategory != "" {
+				fmt.Print("\n    Tags:")
+				if comment.Confidence != "" {
+					fmt.Printf(" confidence=%s", comment.Confidence)
+				}
+				if comment.Type != "" {
+					fmt.Printf(" type=%s", comment.Type)
+				}
+				if comment.Subcategory != "" {
+					fmt.Printf(" subcategory=%s", comment.Subcategory)
+				}
+			}
 			fmt.Println()
 
 			// Indent comment content
@@ -1916,6 +1998,22 @@ func loadConfigValues(apiKeyOverride, apiURLOverride string, verbose bool) (*Con
 	return config, nil
 }
 
+// zipEntryNames lists the file names contained in a zip archive, falling
+// back to a placeholder describing the read error if the archive can't be
+// read.
+func zipEntryNames(zipData []byte) []string {
+	reader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
+	if err != nil {
+		return []string{fmt.Sprintf("(failed to read zip: %v)", err)}
+	}
+
+	names := make([]string, 0, len(reader.File))
+	for _, f := range reader.File {
+		names = append(names, f.Name)
+	}
+	return names
+}
+
 // saveBundleForInspection saves the bundle in multiple formats for inspection
 func saveBundleForInspection(path string, diffContent, zipData []byte, base64Diff string, verbose bool) error {
 	// Create a comprehensive bundle file with sections
@@ -1933,7 +2031,7 @@ func saveBundleForInspection(path string, diffContent, zipData []byte, base64Dif
 	buf.WriteString("## SECTION 2: Zip Archive Info\n")
 	buf.WriteString("## " + strings.Repeat("-", 76) + "\n")
 	buf.WriteString(fmt.Sprintf("## Zip size: %d bytes\n", len(zipData)))
-	buf.WriteString("## Contains: diff.txt\n\n")
+	buf.WriteString("## Contains: " + strings.Join(zipEntryNames(zipData), ", ") + "\n\n")
 
 	buf.WriteString("## SECTION 3: Base64 Encoded Bundle (sent to API)\n")
 	buf.WriteString("## This is what gets transmitted in the API request\n")
@@ -2097,6 +2195,18 @@ func renderHunkWithComments(buf *bytes.Buffer, hunk reviewmodel.DiffReviewHunk, 
 					buf.WriteString(fmt.Sprintf("[%s] Line %d", severity, comment.Line))
 					if comment.Category != "" {
 						buf.WriteString(fmt.Sprintf(" (%s)", comment.Category))
+					}
+					if comment.Confidence != "" || comment.Type != "" || comment.Subcategory != "" {
+						buf.WriteString("\n    Tags:")
+						if comment.Confidence != "" {
+							buf.WriteString(fmt.Sprintf(" confidence=%s", comment.Confidence))
+						}
+						if comment.Type != "" {
+							buf.WriteString(fmt.Sprintf(" type=%s", comment.Type))
+						}
+						if comment.Subcategory != "" {
+							buf.WriteString(fmt.Sprintf(" subcategory=%s", comment.Subcategory))
+						}
 					}
 					buf.WriteString("\n" + strings.Repeat("-", 80) + "\n")
 
@@ -2338,6 +2448,9 @@ func openURL(url string) error {
 
 	var launchErrs []string
 	for _, candidate := range commands {
+		// Safe: candidate.name is drawn from a fixed allowlist of OS browser openers,
+		// each confirmed present via exec.LookPath before being added to commands.
+		// nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command
 		cmd := exec.Command(candidate.name, candidate.args...)
 		if err := cmd.Start(); err != nil {
 			launchErrs = append(launchErrs, fmt.Sprintf("%s: %v", candidate.name, err))
@@ -2621,7 +2734,7 @@ func handleDraftEvents(w http.ResponseWriter, r *http.Request, hub *draftHub) {
 			if err != nil {
 				continue
 			}
-			if _, err := fmt.Fprintf(w, "data: %s\n\n", payload); err != nil {
+			if _, err := io.Copy(w, strings.NewReader(fmt.Sprintf("data: %s\n\n", payload))); err != nil {
 				return
 			}
 			flusher.Flush()
@@ -2661,6 +2774,9 @@ func openDraftInEditor(initial string) (string, error) {
 		parts = []string{"vi"}
 	}
 	args := append(parts[1:], path)
+	// Safe: mirrors git's own $EDITOR/$VISUAL convention. cmdSpec comes from the user's
+	// own environment (LRC_FALLBACK_EDITOR/VISUAL/EDITOR) or defaults to "vi".
+	// nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command
 	cmd := exec.Command(parts[0], args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

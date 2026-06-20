@@ -1,4 +1,6 @@
-const { html } = window.preact;
+import { renderIcon } from '../../components/icons.js';
+
+const { html, useState, useEffect } = window.preact;
 
 export function ConnectorFormPage({
   title,
@@ -27,7 +29,15 @@ export function ConnectorFormPage({
   connectorNamePlaceholder,
   apiDefaultModel = '',
 }) {
+  const [fileError, setFileError] = useState('');
+
+  // Clear file error when provider changes
+  useEffect(() => {
+    setFileError('');
+  }, [form.provider_name]);
+
   const isOllama = form.provider_name === 'ollama';
+  const isGeminiEnterprise = form.provider_name === 'gemini-enterprise';
   const showBaseURL = Boolean(selectedProvider.requiresBaseURL);
   const connectorName = (form.connector_name || '').trim();
   const apiKey = (form.api_key || '').trim();
@@ -43,9 +53,40 @@ export function ConnectorFormPage({
     }
   }
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+      setFileError('File is too large. Please upload a valid service account JSON under 1MB.');
+      onFieldChange('api_key', '');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target.result;
+      onFieldChange('api_key', content);
+      
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed.project_id) {
+          onFieldChange('gcp_project_id', parsed.project_id);
+        }
+        setFileError('');
+      } catch (err) {
+        console.error('Failed to parse Service Account JSON:', err);
+        setFileError('Failed to parse Service Account JSON. Please upload a valid JSON file.');
+        onFieldChange('api_key', '');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const hasClientValidationError =
     !connectorName ||
-    (!isOllama && !apiKey) ||
+    (isGeminiEnterprise && (!apiKey || !form.gcp_project_id || !form.gcp_location)) ||
+    (!isOllama && !isGeminiEnterprise && !apiKey) ||
     (showBaseURL && (!baseURL || !hasValidBaseURL));
 
   const fetchModelsDisabled = fetchingModels || !baseURL || !hasValidBaseURL;
@@ -70,20 +111,83 @@ export function ConnectorFormPage({
               onInput=${(event) => onFieldChange('connector_name', event.target.value)}
             />
             <button class="secondary subtle-action" onClick=${onGenerateName} title="Generate a smart connector name">
+              ${renderIcon(html, 'refresh', { className: 'btn-icon' })}
               Regenerate
             </button>
           </div>
 
-          <label>${isOllama ? 'JWT Token (optional)' : 'API Key'}</label>
-          <input
-            type="password"
-            value=${form.api_key}
-            required=${!isOllama}
-            autoComplete="new-password"
-            spellcheck="false"
-            placeholder=${selectedProvider.apiKeyPlaceholder || ''}
-            onInput=${(event) => onFieldChange('api_key', event.target.value)}
-          />
+          ${isGeminiEnterprise
+            ? html`
+                <label>Service Account JSON</label>
+                <div class="file-upload-container" style="display: flex; align-items: center; justify-content: space-between; border: 1px dashed var(--border-medium, #454545); background: var(--bg-tertiary, #2d2d30); border-radius: 6px; padding: 16px; margin-bottom: 15px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="padding: 8px; background: rgba(0, 122, 204, 0.1); border-radius: 6px; color: var(--text-link, #007acc); display: flex; align-items: center; justify-content: center;">
+                      <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 style="margin: 0; font-size: 14px; font-weight: 500; color: var(--text-primary, #cccccc);">
+                        ${form.api_key ? "Service Account JSON Loaded" : "Upload Credentials File"}
+                      </h4>
+                      <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted, #858585);">
+                        ${form.api_key 
+                          ? `Valid Google Cloud service account JSON configured (${(form.api_key.length / 1024).toFixed(2)} KB)`
+                          : "Upload the Google Cloud IAM Service Account JSON keyfile"
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="cursor-pointer" style="cursor: pointer;">
+                      <span style="display: inline-flex; align-items: center; padding: 6px 12px; border: 1px solid var(--border-medium, #454545); background: transparent; font-size: 13px; font-weight: 500; border-radius: 4px; color: var(--text-link, #007acc); transition: all 0.2s;">
+                        ${form.api_key ? "Replace File" : "Choose File"}
+                      </span>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange=${handleFileChange}
+                        style="display: none;"
+                      />
+                    </label>
+                  </div>
+                </div>
+                ${fileError ? html`<div class="status err" style="margin-top: -10px; margin-bottom: 15px;">${fileError}</div>` : ''}
+                <p style="margin: -5px 0 15px 0; font-size: 12px; color: var(--text-muted, #858585); line-height: 1.5;">
+                  Follow this guide to <a href="https://developers.google.com/workspace/guides/create-credentials#service-account" target="_blank" rel="noopener noreferrer" style="color: var(--text-link, #007acc); text-decoration: underline;">create a service account JSON file</a> and assign the <strong>Agent Platform user</strong> role.
+                </p>
+
+                <label>GCP Project ID</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. my-gcp-project-id"
+                  value=${form.gcp_project_id || ''}
+                  onInput=${(event) => onFieldChange('gcp_project_id', event.target.value)}
+                />
+
+                <label>GCP Location (Region)</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. us-central1, europe-west9"
+                  value=${form.gcp_location || ''}
+                  onInput=${(event) => onFieldChange('gcp_location', event.target.value)}
+                />
+              `
+            : html`
+                <label>${isOllama ? 'JWT Token (optional)' : 'API Key'}</label>
+                <input
+                  type="password"
+                  value=${form.api_key}
+                  required=${!isOllama}
+                  autoComplete="new-password"
+                  spellcheck="false"
+                  placeholder=${selectedProvider.apiKeyPlaceholder || ''}
+                  onInput=${(event) => onFieldChange('api_key', event.target.value)}
+                />
+              `
+          }
 
           ${showBaseURL
             ? (() => {
@@ -134,7 +238,7 @@ export function ConnectorFormPage({
                 <label>Available Models</label>
                 <div class="row">
                   <button class="secondary" disabled=${fetchModelsDisabled} onClick=${onFetchOllamaModels}>
-                    <span class="btn-icon" aria-hidden="true">◎</span>${fetchingModels ? 'Fetching...' : 'Fetch Models'}
+                    ${renderIcon(html, 'refresh', { className: `btn-icon ${fetchingModels ? 'ui-icon-spin' : ''}` })}${fetchingModels ? 'Fetching...' : 'Fetch Models'}
                   </button>
                 </div>
 
@@ -193,7 +297,7 @@ export function ConnectorFormPage({
                                 ? `${form.selected_model}${form.selected_model === apiDefaultModel ? ' (Recommended)' : ''}`
                                 : 'Select a model'}
                             </span>
-                            <span style="color: var(--text-muted, #858585); font-size: 10px; margin-left: 8px;">${isOpen ? '▲' : '▼'}</span>
+                            ${renderIcon(html, isOpen ? 'dropdownOpen' : 'dropdownClosed', { className: 'btn-icon', size: 12 })}
                           </button>
 
                           ${isOpen
@@ -295,10 +399,10 @@ export function ConnectorFormPage({
 
           <div class="row">
             <button disabled=${effectiveSaveDisabled} onClick=${onSave}>
-              <span class="btn-icon" aria-hidden="true">💾</span>${saving ? 'Saving...' : form.id ? 'Update' : 'Create'}
+              ${renderIcon(html, 'save', { className: 'btn-icon' })}${saving ? 'Saving...' : form.id ? 'Update' : 'Create'}
             </button>
             <button class="secondary" onClick=${onCancel}>
-              <span class="btn-icon" aria-hidden="true">↩</span>Cancel
+              ${renderIcon(html, 'cancel', { className: 'btn-icon' })}Cancel
             </button>
           </div>
 

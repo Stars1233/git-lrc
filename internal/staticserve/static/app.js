@@ -2,6 +2,7 @@
 // Fetches data from /api/review and updates reactively
 
 import { waitForPreact, filePathToId, transformEvent, getBadgeClass, formatIssueForCopy, getCommentVisibilityKey } from './components/utils.js';
+import { buildIssueCategoryGroups, buildIssueFacetOptions, buildIssueFilterUniverse, countIssuesByFilters, createDefaultIssueFilters, getIssueFilterSummary, matchesIssueFilters, resetIssueFilters, toggleIssueFilterValue } from './components/issue_filter_state.mjs';
 import { appendStreamedCommentsToFiles, buildEventsURL, extractExternalCommentsFromEvents, extractNewEvents, inferReviewStatusFromEvents } from './components/review_stream_state.mjs';
 import { getHeader } from './components/Header.js';
 import { getSidebar } from './components/Sidebar.js';
@@ -10,10 +11,11 @@ import { getStats } from './components/Stats.js';
 import { getPrecommitBar } from './components/PrecommitBar.js';
 import { getFileBlock } from './components/FileBlock.js';
 import { getEventLog } from './components/EventLog.js';
-import { getSeverityFilter } from './components/SeverityFilter.js';
+import { getIssueFilterBar } from './components/IssueFilterBar.js';
 import { getToolbar } from './components/Toolbar.js';
 import { getCommentNav } from './components/CommentNav.js';
 import { UsageBanner } from './components/UsageBanner.js';
+import { renderIcon } from './components/icons.js';
 import { getSummarySlideshow } from './components/SummarySlideshow/SummarySlideshow.js';
 import { evaluateSummarySlidesEligibility } from './components/SummarySlideshow/slideshowParser.js';
 import { buildPerformanceSnapshot, getFirstRenderTime, getLoadingActivityMessage, getPerformanceNow, recordFirstRenderTime } from './components/review_performance_state.mjs';
@@ -61,8 +63,11 @@ function convertFilesToUIFormat(files) {
             }
             commentsByLine[line].push({
                 Severity: (comment.severity || comment.Severity || 'info').toUpperCase(),
+                Confidence: comment.confidence || comment.Confidence || '',
+                Type: comment.type || comment.Type || '',
                 BadgeClass: getBadgeClass(comment.severity || comment.Severity || 'info'),
                 Category: comment.category || comment.Category || '',
+                Subcategory: comment.subcategory || comment.Subcategory || '',
                 Content: comment.content || comment.Content || '',
                 HasCategory: !!(comment.category || comment.Category),
                 Line: line,
@@ -240,7 +245,7 @@ async function initApp() {
     const PrecommitBar = await getPrecommitBar();
     const FileBlock = await getFileBlock();
     const EventLog = await getEventLog();
-    const SeverityFilter = await getSeverityFilter();
+    const IssueFilterBar = await getIssueFilterBar();
     const Toolbar = await getToolbar();
     const CommentNav = await getCommentNav();
     const SummarySlideshow = await getSummarySlideshow();
@@ -256,7 +261,7 @@ async function initApp() {
         const [expandedFiles, setExpandedFiles] = useState(new Set());
         const [allExpanded, setAllExpanded] = useState(false);
         const [activeFileId, setActiveFileId] = useState(null);
-        const [visibleSeverities, setVisibleSeverities] = useState(new Set(['critical', 'error', 'warning', 'info']));
+        const [issueFilters, setIssueFilters] = useState(createDefaultIssueFilters());
         const [events, setEvents] = useState([]);
         const [newEventCount, setNewEventCount] = useState(0);
         const [isTailing, setIsTailing] = useState(false);
@@ -579,6 +584,30 @@ async function initApp() {
             handleFileClick(fileId, lineNumber);
             return true;
         }, [handleFileClick, resolveSlideFileId]);
+
+        const getVisibleTopContentOffset = useCallback((mainContent) => {
+            if (!mainContent) {
+                return 0;
+            }
+
+            const mainContentRect = mainContent.getBoundingClientRect();
+            const topAnchors = ['.header', '.issue-filter-bar'];
+
+            return topAnchors.reduce((maxOffset, selector) => {
+                const element = document.querySelector(selector);
+                if (!element) {
+                    return maxOffset;
+                }
+
+                const rect = element.getBoundingClientRect();
+                const overlapsViewport = rect.bottom > mainContentRect.top && rect.top < mainContentRect.bottom;
+                if (!overlapsViewport) {
+                    return maxOffset;
+                }
+
+                return Math.max(maxOffset, rect.bottom - mainContentRect.top);
+            }, 0);
+        }, []);
         
         // Navigate to comment
         const navigateToComment = useCallback((commentId, fileId) => {
@@ -596,18 +625,23 @@ async function initApp() {
                 const comment = document.getElementById(commentId);
                 if (comment) {
                     const mainContent = document.querySelector('.main-content');
-                    const header = document.querySelector('.header');
-                    const headerHeight = header ? header.offsetHeight : 60;
-                    const commentRect = comment.getBoundingClientRect();
+                    if (!mainContent) {
+                        return;
+                    }
+
+                    const commentBox = comment.querySelector('.comment-container, .comment-hidden-placeholder') || comment;
+                    const commentRect = commentBox.getBoundingClientRect();
                     const mainContentRect = mainContent.getBoundingClientRect();
-                    const scrollTarget = mainContent.scrollTop + commentRect.top - mainContentRect.top - headerHeight - 20;
+                    const topOffset = getVisibleTopContentOffset(mainContent);
+                    const readableGapPx = 18;
+                    const scrollTarget = mainContent.scrollTop + commentRect.top - mainContentRect.top - topOffset - readableGapPx;
                     mainContent.scrollTo({ top: scrollTarget, behavior: 'smooth' });
                     
                     comment.classList.add('highlight');
                     setTimeout(() => comment.classList.remove('highlight'), 1500);
                 }
             }, 100);
-        }, []);
+        }, [getVisibleTopContentOffset]);
         
         // Tab change
         const handleTabChange = useCallback((tab) => {
@@ -649,8 +683,7 @@ async function initApp() {
             const filteredFiles = (reviewData.files || reviewData.Files || []).map(file => {
                 const filePath = file.file_path || file.filePath || file.FilePath;
                 const newComments = (file.comments || file.Comments || []).filter(c => {
-                    const sev = (c.severity || c.Severity || '').toLowerCase();
-                    if (!visibleSeverities.has(sev)) return false;
+                    if (!matchesIssueFilters(c, issueFilters)) return false;
                     const key = getCommentVisibilityKey(filePath, c);
                     return !hiddenCommentKeys.has(key);
                 });
@@ -694,7 +727,7 @@ async function initApp() {
                     message: "Failed to send to agent: " + e.message 
                 });
             }
-        }, [reviewData, visibleSeverities, hiddenCommentKeys]);
+        }, [reviewData, issueFilters, hiddenCommentKeys]);
 
         const showCopyFeedback = useCallback((status, message) => {
             setCopyFeedback({ status, message });
@@ -807,10 +840,7 @@ async function initApp() {
                 <div class="loading-screen">
                     <div class="loading-content">
                         <div class="loading-logo error">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 8v4M12 16h.01" stroke-linecap="round" />
-                            </svg>
+                            ${renderIcon(html, 'handoffNotice', { size: 48 })}
                         </div>
                         <h1 class="loading-title">Session Ended</h1>
                         <p class="loading-text">This review session is no longer active.</p>
@@ -826,10 +856,7 @@ async function initApp() {
                 <div class="loading-screen">
                     <div class="loading-content">
                         <div class="loading-logo">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 6v6l4 2" stroke-linecap="round" />
-                            </svg>
+                            ${renderIcon(html, 'refresh', { size: 48, className: 'ui-icon-spin' })}
                         </div>
                         <h1 class="loading-title">LiveReview</h1>
                         <div class="loading-spinner"></div>
@@ -845,10 +872,7 @@ async function initApp() {
                 <div class="loading-screen">
                     <div class="loading-content">
                         <div class="loading-logo error">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M15 9l-6 6M9 9l6 6" stroke-linecap="round" />
-                            </svg>
+                            ${renderIcon(html, 'errorStatus', { size: 48 })}
                         </div>
                         <h1 class="loading-title">LiveReview</h1>
                         <h2 class="loading-error-title">Error Loading Review</h2>
@@ -858,17 +882,24 @@ async function initApp() {
             `;
         }
         
-        // Toggle severity visibility
-        const toggleSeverity = useCallback((severity) => {
-            setVisibleSeverities(prev => {
-                const next = new Set(prev);
-                if (next.has(severity)) {
-                    next.delete(severity);
-                } else {
-                    next.add(severity);
-                }
-                return next;
-            });
+        const filterCounts = countIssuesByFilters(files, issueFilters, hiddenCommentKeys);
+        const filterOptions = buildIssueFacetOptions(files, issueFilters, hiddenCommentKeys);
+        const categoryGroups = buildIssueCategoryGroups(files, issueFilters, hiddenCommentKeys);
+        const allCategoryGroups = buildIssueCategoryGroups(files, createDefaultIssueFilters(), hiddenCommentKeys);
+        const filterUniverse = buildIssueFilterUniverse(files, hiddenCommentKeys);
+        const filterSummary = getIssueFilterSummary(issueFilters, filterUniverse);
+
+        const toggleIssueFilter = useCallback((field, value) => {
+            const matchingGroup = field === 'category'
+                ? allCategoryGroups.find((group) => group.value === String(value || '').trim().toLowerCase())
+                : null;
+            setIssueFilters((prev) => toggleIssueFilterValue(prev, field, value, {
+                childValues: matchingGroup?.subcategories?.map((subcategory) => subcategory.value) || [],
+            }));
+        }, [allCategoryGroups]);
+
+        const handleResetIssueFilters = useCallback(() => {
+            setIssueFilters(resetIssueFilters());
         }, []);
         
         // Copy all visible issues to clipboard
@@ -880,8 +911,7 @@ async function initApp() {
                     hunk.Lines.forEach(line => {
                         if (line.IsComment && line.Comments) {
                             line.Comments.forEach((comment) => {
-                                const sev = (comment.Severity || '').toLowerCase();
-                                if (!visibleSeverities.has(sev)) return;
+                                if (!matchesIssueFilters(comment, issueFilters)) return;
                                 const visibilityKey = getCommentVisibilityKey(file.FilePath, comment);
                                 if (visibilityKey && hiddenCommentKeys.has(visibilityKey)) return;
                                 lines.push(formatIssueForCopy(file.FilePath, comment));
@@ -902,7 +932,7 @@ async function initApp() {
                 console.error('Failed to copy issues:', err);
                 showCopyFeedback('error', 'Failed to copy issues');
             }
-        }, [files, visibleSeverities, hiddenCommentKeys, showCopyFeedback]);
+        }, [files, issueFilters, hiddenCommentKeys, showCopyFeedback]);
         
         // Build flat ordered list of VISIBLE comments for navigation
         const allComments = [];
@@ -913,8 +943,7 @@ async function initApp() {
                 hunk.Lines.forEach(line => {
                     if (line.IsComment && line.Comments) {
                         line.Comments.forEach((comment, commentIdx) => {
-                            const sev = (comment.Severity || '').toLowerCase();
-                            if (!visibleSeverities.has(sev)) return;
+                            if (!matchesIssueFilters(comment, issueFilters)) return;
                             const visibilityKey = getCommentVisibilityKey(file.FilePath, comment);
                             if (visibilityKey && hiddenCommentKeys.has(visibilityKey)) return;
                             const cid = `comment-${fileId}-${comment.Line}-${commentIdx}`;
@@ -941,8 +970,7 @@ async function initApp() {
                 hunk.Lines.forEach(line => {
                     if (line.IsComment && line.Comments) {
                         line.Comments.forEach((comment) => {
-                            const sev = (comment.Severity || '').toLowerCase();
-                            if (!visibleSeverities.has(sev)) return;
+                            if (!matchesIssueFilters(comment, issueFilters)) return;
                             const visibilityKey = getCommentVisibilityKey(file.FilePath, comment);
                             if (visibilityKey && hiddenCommentKeys.has(visibilityKey)) return;
                             totalVisibleComments++;
@@ -960,7 +988,7 @@ async function initApp() {
             if (status === 'failed') {
                 return html`
                     <div class="status-container error">
-                        <span class="status-icon">❌</span>
+                        <span class="status-icon">${renderIcon(html, 'errorStatus', { size: 16 })}</span>
                         <span>Review completed with errors</span>
                     </div>
                 `;
@@ -968,7 +996,7 @@ async function initApp() {
             if (status === 'completed') {
                 return html`
                     <div class="status-container success">
-                        <span class="status-icon">✅</span>
+                        <span class="status-icon">${renderIcon(html, 'successStatus', { size: 16 })}</span>
                         <span>Review completed successfully</span>
                     </div>
                 `;
@@ -981,13 +1009,15 @@ async function initApp() {
                 files=${files}
                 activeFileId=${activeFileId}
                 onFileClick=${handleFileClick}
-                visibleSeverities=${visibleSeverities}
+                issueFilters=${issueFilters}
+                hiddenCommentKeys=${hiddenCommentKeys}
             />
             <div class="main-content">
                 <div class="container">
                     <${Header} 
                         generatedTime=${reviewData?.generatedTime || reviewData?.GeneratedTime}
                         friendlyName=${reviewData?.friendlyName || reviewData?.FriendlyName}
+                        repositoryPath=${reviewData?.repositoryPath || reviewData?.RepositoryPath}
                     />
                     
                     ${showLoader && html`
@@ -1052,10 +1082,15 @@ async function initApp() {
                     />
                     
                     ${activeTab === 'files' && html`
-                        <${SeverityFilter}
+                        <${IssueFilterBar}
                             files=${files}
-                            visibleSeverities=${visibleSeverities}
-                            onToggleSeverity=${toggleSeverity}
+                            issueFilters=${issueFilters}
+                            filterOptions=${filterOptions}
+                            categoryGroups=${categoryGroups}
+                            filterCounts=${filterCounts}
+                            filterSummary=${filterSummary}
+                            onToggleFilter=${toggleIssueFilter}
+                            onResetFilters=${handleResetIssueFilters}
                             onCopyVisibleIssues=${handleCopyVisibleIssues}
                             hiddenCommentKeys=${hiddenCommentKeys}
                             copyFeedbackStatus=${copyFeedback.status}
@@ -1076,7 +1111,7 @@ async function initApp() {
                                     file=${file}
                                     expanded=${expandedFiles.has(file.ID)}
                                     onToggle=${toggleFile}
-                                    visibleSeverities=${visibleSeverities}
+                                    issueFilters=${issueFilters}
                                     hiddenCommentKeys=${hiddenCommentKeys}
                                     onToggleCommentVisibility=${toggleCommentVisibility}
                                     reviewStartMs=${reviewStartMsRef.current}
@@ -1102,14 +1137,10 @@ async function initApp() {
                                 ${handoffModal.type === 'success' 
                                     ? html`
                                         <div style="margin-bottom: 16px; color: #8b5cf6;">
-                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <rect x="2" y="3" width="20" height="18" rx="2" ry="2"></rect>
-                                                <polyline points="6 8 10 12 6 16"></polyline>
-                                                <line x1="14" y1="16" x2="18" y2="16"></line>
-                                            </svg>
+                                            ${renderIcon(html, 'handoffSuccess', { size: 48 })}
                                         </div>
                                     `
-                                    : html`<div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>`
+                                    : html`<div style="margin-bottom: 16px;">${renderIcon(html, 'handoffNotice', { size: 48 })}</div>`
                                 }
                                 <h3 style="margin: 0 0 12px 0; font-size: 20px; color: var(--text-primary);">
                                     ${handoffModal.type === 'success' ? 'Check Your Terminal' : 'Notice'}
@@ -1167,7 +1198,7 @@ async function initApp() {
                     onClose=${() => setSlideShowOpen(false)}
                 />
             `}
-        `;
+            `;
     }
     
     // Render the app

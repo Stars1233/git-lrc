@@ -132,14 +132,17 @@ func prepareComments(comments []reviewmodel.DiffReviewComment, filePath string) 
 		}
 
 		badgeClass := "badge-" + severity
-		if severity != "info" && severity != "warning" && severity != "error" && severity != "critical" {
+		if severity != "info" && severity != "warning" && severity != "critical" {
 			badgeClass = "badge-info"
 		}
 
 		out[i] = HTMLCommentData{
 			Severity:    strings.ToUpper(severity),
+			Confidence:  comment.Confidence,
+			Type:        comment.Type,
 			BadgeClass:  badgeClass,
 			Category:    comment.Category,
+			Subcategory: comment.Subcategory,
 			Content:     comment.Content,
 			HasCategory: comment.Category != "",
 			Line:        comment.Line,

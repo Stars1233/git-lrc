@@ -289,6 +289,8 @@ func runInternalClaudeRunCommit(c *cli.Context) error {
 
 	var reviewBuf bytes.Buffer
 	reviewArgs := []string{"review", "--staged", "--blocking-review", "--blocking-review-timeout", timeout}
+	// Safe: re-invokes this same lrc binary (os.Executable) with a fixed subcommand and flags.
+	// nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command
 	reviewCmd := exec.Command(lrcExe, reviewArgs...)
 	reviewCmd.Stdout = io.MultiWriter(os.Stdout, &reviewBuf)
 	reviewCmd.Stderr = io.MultiWriter(os.Stderr, &reviewBuf)
@@ -357,6 +359,9 @@ func claudeRunOriginalCommit(tokens []string, markHandled bool) {
 	if markHandled {
 		env = append(env, "LRC_CLAUDE_REVIEW_HANDLED=1")
 	}
+	// Safe: re-executes the original git invocation intercepted by this hook, which was
+	// validated to start with "git commit" before reaching here.
+	// nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command
 	cmd := exec.Command(tokens[0], tokens[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

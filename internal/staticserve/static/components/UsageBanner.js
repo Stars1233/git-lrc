@@ -1,4 +1,5 @@
 import { normalizeUsagePayload } from '/static/components/usage_chip_model.mjs';
+import { renderIcon } from '/static/components/icons.js';
 
 const { html, useEffect, useState } = window.preact;
 
@@ -45,11 +46,7 @@ export function UsageBanner({ endpoint }) {
             <div class="quota-banner-slate">
                 <div class="qbs-flex">
                     <div class="qbs-icon-wrap">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                            <line x1="12" y1="9" x2="12" y2="13"></line>
-                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                        </svg>
+                        ${renderIcon(html, 'issueWarning', { size: 20 })}
                     </div>
                     <div class="qbs-content">
                         <p class="qbs-title">You've reached your monthly limit</p>
@@ -71,7 +68,7 @@ export function UsageBanner({ endpoint }) {
             <div class="main-alert main-alert-warn">
                 <div class="main-alert-content">
                     <div class="main-alert-text">
-                        <span class="main-alert-title">⚠️ LOC Usage Nearing Limit</span>
+                        <span class="main-alert-title">${renderIcon(html, 'issueWarning', { className: 'btn-icon', size: 14 })}LOC Usage Nearing Limit</span>
                         <span class="main-alert-sub">
                             You've used ${chip.locUsed.toLocaleString()} of ${chip.locLimit > 0 ? chip.locLimit.toLocaleString() : 'N/A'} LOC (${chip.usagePct}%). Upgrade to avoid interruption.
                         </span>

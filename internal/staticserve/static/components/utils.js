@@ -1,5 +1,7 @@
 // Utility functions for LiveReview UI
 
+import { buildCommentVisibilityKey } from './issue_filter_state.mjs';
+
 // Wait for preact to be available
 export function waitForPreact() {
     return new Promise((resolve) => {
@@ -25,7 +27,6 @@ export function filePathToId(filePath) {
 export function getBadgeClass(severity) {
     const sev = (severity || '').toLowerCase();
     if (sev === 'critical') return 'badge-critical';
-    if (sev === 'error') return 'badge-error';
     if (sev === 'warning') return 'badge-warning';
     return 'badge-info';
 }
@@ -66,73 +67,7 @@ export function buildIssueCodeExcerpt(lines, commentLineIndex, contextLines = 1)
 
 // Build a stable key for a comment so toggles stay in sync even if order changes.
 export function getCommentVisibilityKey(filePath, comment) {
-    const path = filePath || comment?.FilePath || '';
-    const line = comment?.Line ?? comment?.line ?? '';
-    const severity = (comment?.Severity || comment?.severity || '').toLowerCase();
-    const category = (comment?.Category || comment?.category || '').toLowerCase();
-    const content = (comment?.Content || comment?.content || '')
-        .trim()
-        .replace(/\s+/g, ' ');
-    return `${path}::${line}::${severity}::${category}::${content}`;
-}
-
-// Count visible comments for a single file, filtered by visibleSeverities.
-// Returns the count of comments whose severity is in the Set.
-export function countVisibleComments(file, visibleSeverities, hiddenCommentKeys) {
-    if (!file) return 0;
-    const severitySet = visibleSeverities && visibleSeverities.size > 0
-        ? visibleSeverities
-        : new Set(['critical', 'error', 'warning', 'info']);
-    const hiddenSet = hiddenCommentKeys || null;
-    let count = 0;
-    (file.Hunks || []).forEach(hunk => {
-        (hunk.Lines || []).forEach(line => {
-            if (!line.IsComment || !line.Comments) return;
-            line.Comments.forEach((c) => {
-                const sev = (c.Severity || '').toLowerCase();
-                if (!severitySet.has(sev)) return;
-                if (hiddenSet) {
-                    const visibilityKey = getCommentVisibilityKey(file.FilePath, c);
-                    if (hiddenSet.has(visibilityKey)) return;
-                }
-                count++;
-            });
-        });
-    });
-    return count;
-}
-
-// Count all issues by severity across files. Returns { critical, error, warning, info, total, visible }.
-export function countIssuesBySeverity(files, visibleSeverities, hiddenCommentKeys) {
-    let critical = 0, error = 0, warning = 0, info = 0, visible = 0;
-    const hiddenSet = hiddenCommentKeys || null;
-    const severitySet = visibleSeverities && visibleSeverities.size > 0
-        ? visibleSeverities
-        : new Set(['critical', 'error', 'warning', 'info']);
-    files.forEach(file => {
-        if (!file.HasComments) return;
-        (file.Hunks || []).forEach(hunk => {
-            (hunk.Lines || []).forEach(line => {
-                if (line.IsComment && line.Comments) {
-                    line.Comments.forEach((c) => {
-                        const sev = (c.Severity || '').toLowerCase();
-                        if (sev === 'critical') critical++;
-                        else if (sev === 'error') error++;
-                        else if (sev === 'warning') warning++;
-                        else info++;
-                        if (!severitySet.has(sev)) return;
-                        if (hiddenSet) {
-                            const visibilityKey = getCommentVisibilityKey(file.FilePath, c);
-                            if (hiddenSet.has(visibilityKey)) return;
-                        }
-                        visible++;
-                    });
-                }
-            });
-        });
-    });
-    const total = critical + error + warning + info;
-    return { critical, error, warning, info, total, visible };
+    return buildCommentVisibilityKey(filePath, comment);
 }
 
 // Format a single issue for clipboard copy.

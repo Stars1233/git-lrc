@@ -597,6 +597,8 @@ function parseStructuredListItem(itemNode) {
     const parsedPath = parsePathToken(fileMatch[1]);
     if (parsedPath) {
       const escapedPath = fileMatch[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Safe: escapedPath has all regex metacharacters escaped above before interpolation.
+      // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
       const descriptionHtml = extractStructuredListBodyHtml(itemNode, new RegExp(`^\\s*${escapedPath}\\s*[:\\-–]\\s*`)) || fileMatch[2].trim();
       return {
         kind: 'file-point',
@@ -608,6 +610,9 @@ function parseStructuredListItem(itemNode) {
 
   const labelMatch = normalizedText.match(/^(Functionality|Risk|Impact|Recommendation|Action)\s*:\s*(.+)$/i);
   if (labelMatch) {
+    // Safe: labelMatch[1] can only be one of the fixed enum words matched above, none of
+    // which contain regex metacharacters.
+    // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
     const bodyHtml = extractStructuredListBodyHtml(itemNode, new RegExp(`^\\s*${labelMatch[1]}\\s*:\\s*`, 'i')) || labelMatch[2].trim();
     return {
       kind: 'label-point',

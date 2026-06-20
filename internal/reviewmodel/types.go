@@ -82,8 +82,11 @@ type DiffReviewHunk struct {
 }
 
 type DiffReviewComment struct {
-	Line     int    `json:"line"`
-	Content  string `json:"content"`
-	Severity string `json:"severity"`
-	Category string `json:"category"`
+	Line        int    `json:"line"`
+	Content     string `json:"content"`
+	Severity    string `json:"severity"`
+	Confidence  string `json:"confidence"`
+	Type        string `json:"type"`
+	Category    string `json:"category"`
+	Subcategory string `json:"subcategory"`
 }

@@ -1,4 +1,5 @@
 // Summary component - renders markdown summary
+import { renderIcon } from './icons.js';
 import { waitForPreact } from './utils.js';
 import { getSummarySlideshow } from './SummarySlideshow/SummarySlideshow.js';
 
@@ -226,6 +227,7 @@ export async function createSummary() {
                                             aria-label="Show slides view"
                                             aria-pressed=${summaryViewMode === 'slides'}
                                         >
+                                            ${renderIcon(html, 'slidesView', { className: 'btn-icon' })}
                                             Slides
                                         </button>
                                         <button
@@ -235,6 +237,7 @@ export async function createSummary() {
                                             aria-label="Show text view"
                                             aria-pressed=${summaryViewMode === 'text'}
                                         >
+                                            ${renderIcon(html, 'textView', { className: 'btn-icon' })}
                                             Text
                                         </button>
                                     </div>
@@ -248,9 +251,7 @@ export async function createSummary() {
                         <div class="summary-actions">
                             ${slidesEnabled && html`
                                 <button class="action-btn summary-play-btn" onClick=${onOpenSlideshowModal} title="Open slides in dialog" aria-label="Open slides in dialog">
-                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 4h12v12M8 20h12M4 8v12h12" />
-                                    </svg>
+                                    ${renderIcon(html, 'openSlides')}
                                     Open Slides
                                 </button>
                             `}
@@ -259,7 +260,7 @@ export async function createSummary() {
                 `}
                 ${showAllClear && html`
                     <div class="summary-all-clear" role="status" aria-live="polite">
-                        <div class="summary-all-clear-icon" aria-hidden="true">✓</div>
+                        <div class="summary-all-clear-icon" aria-hidden="true">${renderIcon(html, 'successStatus', { size: 18 })}</div>
                         <div class="summary-all-clear-copy">
                             <strong class="summary-all-clear-title">Good to go</strong>
                             <p class="summary-all-clear-text">This review finished without any review comments. No issues were found in the reviewed diff.</p>
@@ -268,7 +269,7 @@ export async function createSummary() {
                 `}
                 ${isError && html`
                     <div style="padding: 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; margin-bottom: 16px;">
-                        <strong style="display: block; margin-bottom: 8px; font-size: 16px;">⚠️ Error Details:</strong>
+                        <strong style="display: block; margin-bottom: 8px; font-size: 16px;">${renderIcon(html, 'errorStatus', { className: 'btn-icon', size: 16 })}Error Details:</strong>
                         <pre style="white-space: pre-wrap; font-family: monospace; font-size: 13px; margin: 0;">
                             ${errorSummary || 'Review failed'}
                         </pre>

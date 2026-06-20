@@ -29,7 +29,7 @@ function normalizeEventId(event, index) {
 
 function normalizeSeverity(rawSeverity) {
     const severity = String(rawSeverity || 'info').trim().toLowerCase();
-    if (severity === 'critical' || severity === 'error' || severity === 'warning') {
+    if (severity === 'critical' || severity === 'warning') {
         return severity;
     }
     return 'info';
@@ -113,7 +113,10 @@ export function normalizeStreamedComment(rawComment) {
         line: line,
         content: content,
         severity: normalizeSeverity(rawComment.Severity ?? rawComment.severity),
-        category: String(rawComment.Category ?? rawComment.category ?? 'review').trim() || 'review'
+        confidence: String(rawComment.Confidence ?? rawComment.confidence ?? '').trim(),
+        type: String(rawComment.Type ?? rawComment.type ?? '').trim(),
+        category: String(rawComment.Category ?? rawComment.category ?? 'review').trim() || 'review',
+        subcategory: String(rawComment.Subcategory ?? rawComment.subcategory ?? '').trim(),
     };
 }
 

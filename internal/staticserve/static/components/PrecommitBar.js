@@ -1,4 +1,5 @@
 // PrecommitBar component - commit/push/skip actions
+import { renderIcon } from './icons.js';
 import { waitForPreact } from './utils.js';
 
 const SESSION_REVIEW_ID = new URLSearchParams(window.location.search).get('r') || '';
@@ -150,7 +151,7 @@ export async function createPrecommitBar() {
             return html`
                 <div class="precommit-bar">
                     <div style="padding: 12px; color: var(--text-muted); font-size: 13px;">
-                        <p>📖 Viewing historical commit review. Press <strong>Ctrl-C</strong> in the terminal to exit.</p>
+                        <p>Viewing historical commit review. Press <strong>Ctrl-C</strong> in the terminal to exit.</p>
                     </div>
                 </div>
             `;
@@ -191,9 +192,7 @@ export async function createPrecommitBar() {
                             disabled=${disabled}
                             onClick=${() => postDecision('/commit', 'Commit requested', true)}
                         >
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
+                            ${renderIcon(html, 'commit')}
                             Commit
                         </button>
                         <button 
@@ -201,9 +200,7 @@ export async function createPrecommitBar() {
                             disabled=${disabled}
                             onClick=${() => postDecision('/commit-push', 'Commit and push requested', true)}
                         >
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
+                            ${renderIcon(html, 'commitPush')}
                             Commit & Push
                         </button>
                     </div>
@@ -214,9 +211,7 @@ export async function createPrecommitBar() {
                                 disabled=${disabled}
                                 onClick=${() => postDecision('/skip', 'Skip requested', false)}
                             >
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                                ${renderIcon(html, 'skip')}
                                 Skip
                             </button>
                             <button 
@@ -224,9 +219,7 @@ export async function createPrecommitBar() {
                                 disabled=${disabled}
                                 onClick=${() => postDecision('/vouch', 'Vouch requested', false)}
                             >
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
+                                ${renderIcon(html, 'vouch')}
                                 Vouch
                             </button>
                         `}
@@ -235,9 +228,7 @@ export async function createPrecommitBar() {
                             disabled=${disabled}
                             onClick=${() => postDecision('/abort', 'Abort requested', false)}
                         >
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            ${renderIcon(html, 'abort')}
                             Abort Commit
                         </button>
                     </div>

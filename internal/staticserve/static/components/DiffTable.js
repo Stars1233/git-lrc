@@ -1,5 +1,6 @@
 // DiffTable component - renders diff hunks with lines and comments
 import { waitForPreact, filePathToId, getCommentVisibilityKey, buildIssueCodeExcerpt } from './utils.js';
+import { matchesIssueFilters } from './issue_filter_state.mjs';
 import { getComment } from './Comment.js';
 import { getCommentRenderLabel } from './review_performance_state.mjs';
 
@@ -11,7 +12,7 @@ export async function createDiffTable() {
         hunks,
         filePath,
         fileId,
-        visibleSeverities,
+        issueFilters,
         hiddenCommentKeys,
         onToggleCommentVisibility,
         reviewStartMs,
@@ -56,8 +57,7 @@ export async function createDiffTable() {
                                 <td class="line-content">${line.Content}</td>
                             </tr>
                             ${line.IsComment && line.Comments && line.Comments.map((comment, commentIdx) => {
-                                const sev = (comment.Severity || '').toLowerCase();
-                                if (visibleSeverities && !visibleSeverities.has(sev)) return null;
+                                if (!matchesIssueFilters(comment, issueFilters)) return null;
                                 const commentId = `comment-${resolvedFileId}-${comment.Line}-${commentIdx}`;
                                 const visibilityKey = getCommentVisibilityKey(filePath, comment);
                                 const isHidden = hiddenCommentKeys && hiddenCommentKeys.has(visibilityKey);

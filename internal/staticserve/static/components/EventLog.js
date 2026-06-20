@@ -1,4 +1,5 @@
 // EventLog component - displays review progress events
+import { renderIcon } from './icons.js';
 import { waitForPreact, formatTime } from './utils.js';
 
 export async function createEventLog() {
@@ -24,8 +25,12 @@ export async function createEventLog() {
         };
         
         const getStatusText = () => {
-            if (status === 'completed') return '✅ Review completed successfully';
-            if (status === 'failed') return '❌ Review completed with errors';
+            if (status === 'completed') {
+                return html`${renderIcon(html, 'successStatus', { className: 'btn-icon', size: 14 })}Review completed successfully`;
+            }
+            if (status === 'failed') {
+                return html`${renderIcon(html, 'errorStatus', { className: 'btn-icon', size: 14 })}Review completed with errors`;
+            }
             if (events.length > 0) return `${events.length} events received`;
             return 'Waiting for events...';
         };

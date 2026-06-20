@@ -28,3 +28,13 @@ Secondly, the status docs #file:storage_status.md   and #file:network_status.md 
 Finally the line numbers should be kept upto date in these status docs, and violation should be checked via #file:check-status-doc-links.sh 
 
 Stick strictly to my language and specifications here. Don't change it and generalize it the way you want. Stay with my guidance as is.
+
+
+# Rule 3: UI iconography guidance
+
+For any UI icon work in git-lrc, follow `docs/ui-iconography.md` as the source of truth.
+
+- Use the shared icon registry in `internal/staticserve/static/components/icons.js`.
+- Do not introduce new emoji or Unicode action icons.
+- Do not force vendor logos onto action buttons just because the label names a vendor.
+- If a new icon decision is needed, update `docs/ui-iconography.md` together with the code.

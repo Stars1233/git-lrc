@@ -1,4 +1,5 @@
 import { calculateTotalReadTime, formatRemainingTime, parseMarkdownToSlides } from './slideshowParser.js';
+import { renderIcon } from '../icons.js';
 import { copyToClipboard, waitForPreact } from '../utils.js';
 import { getFeedbackPopup } from '../FeedbackPopup.js';
 
@@ -891,9 +892,7 @@ export async function createSummarySlideshow() {
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px;">
                             <strong style="color: var(--text-primary); font-size: 13px;">Keyboard shortcuts</strong>
                             <button class="action-btn summary-slide-btn" onClick=${() => setIsHelpShown(false)} title="Close keyboard help" aria-label="Close keyboard help">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                                ${renderIcon(html, 'close', { size: 14 })}
                             </button>
                         </div>
                         <div style="font-size: 12px; line-height: 1.8; color: var(--text-secondary);">
@@ -913,9 +912,7 @@ export async function createSummarySlideshow() {
                             Review slideshow
                         </div>
                         <button class="action-btn summary-slide-btn" onClick=${handleClose} title="Close slideshow (Esc)" aria-label="Close slideshow">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            ${renderIcon(html, 'close', { size: 16 })}
                         </button>
                     </div>
                 `}
@@ -929,9 +926,7 @@ export async function createSummarySlideshow() {
                         disabled=${currentSlide === 0 && !isCompleteSlide}
                         tabIndex="-1"
                     >
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                        </svg>
+                        ${renderIcon(html, 'previous', { size: 18 })}
                     </button>
 
                 <div ref=${bodyRef} class="summary-slideshow-body" style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; ${isIntro || isCompleteSlide ? 'align-items: center;' : ''} padding: 28px 32px;">
@@ -967,9 +962,7 @@ export async function createSummarySlideshow() {
                             </div>
                             ${isModal && html`
                                 <button class="action-btn summary-slide-btn" onClick=${handleClose} title="Close and return to review">
-                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
-                                    </svg>
+                                    ${renderIcon(html, 'openReview', { size: 14 })}
                                     Back to Review
                                 </button>
                             `}
@@ -1057,9 +1050,7 @@ export async function createSummarySlideshow() {
                         disabled=${isCompleteSlide}
                         tabIndex="-1"
                     >
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
+                        ${renderIcon(html, 'next', { size: 18 })}
                     </button>
                 </div>
 
@@ -1067,23 +1058,15 @@ export async function createSummarySlideshow() {
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
                         <div style="display: flex; align-items: center; gap: 6px;">
                             <button class="action-btn summary-slide-btn" onClick=${prevSlide} title="Previous slide (H / K / Left Arrow)" aria-label="Previous slide" disabled=${currentSlide === 0 && !isCompleteSlide}>
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                                </svg>
+                                ${renderIcon(html, 'previous', { size: 14 })}
                                 Prev
                             </button>
                             <button class="action-btn summary-slide-btn" onClick=${nextSlide} title="Next slide (J / L / Right Arrow / Space)" aria-label="Next slide" disabled=${isCompleteSlide}>
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
+                                ${renderIcon(html, 'next', { size: 14 })}
                                 Next
                             </button>
                             <button class="action-btn summary-slide-btn ${isAutoPlay ? 'active' : ''}" onClick=${toggleAutoPlay} title="Toggle auto-play (A)" aria-label="Toggle auto-play">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    ${isAutoPlay
-                                        ? html`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6" />`
-                                        : html`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 6.82v10.36a1 1 0 001.53.848l8.25-5.18a1 1 0 000-1.696L9.53 5.972A1 1 0 008 6.82z" />`}
-                                </svg>
+                                ${renderIcon(html, isAutoPlay ? 'pause' : 'play', { size: 14 })}
                                 ${buildAutoplayLabel(isAutoPlay, autoPlayRemainingMs)}
                             </button>
                         </div>
@@ -1114,19 +1097,11 @@ export async function createSummarySlideshow() {
                                 codeExcerpt=${slideAllSlidesData}
                             />
                             <button class="action-btn summary-slide-btn ${copied ? 'copied' : ''}" onClick=${handleCopy} title="Copy current slide (C)" aria-label="Copy current slide">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    ${copied
-                                        ? html`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`
-                                        : html`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />`}
-                                </svg>
+                                ${renderIcon(html, copied ? 'copied' : 'copyLogs', { size: 14 })}
                                 ${copied ? 'Copied!' : 'Copy'}
                             </button>
                             <button class="action-btn summary-slide-btn" onClick=${() => setIsHelpShown(true)} title="Show keyboard shortcuts (?)" aria-label="Show keyboard shortcuts">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 1.918-2 3.522-2 2.071 0 3.75 1.343 3.75 3 0 1.268-.983 2.352-2.37 2.79-.488.154-.88.56-.88 1.012V15" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01" />
-                                    <circle cx="12" cy="12" r="9" stroke-width="2" />
-                                </svg>
+                                ${renderIcon(html, 'help', { size: 14 })}
                                 Help
                             </button>
                         </div>

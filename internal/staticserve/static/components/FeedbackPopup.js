@@ -1,5 +1,6 @@
 // FeedbackPopup — rich feedback UX for vote buttons
 import { waitForPreact, copyToClipboard } from "./utils.js";
+import { renderIcon } from "./icons.js";
 import { getReviewMeta } from "./reviewMeta.mjs";
 
 const SESSION_REVIEW_ID = new URLSearchParams(window.location.search).get('r') || '';
@@ -435,26 +436,19 @@ export async function createFeedbackPopup() {
     const ImpactLink = () =>
       statsExpanded
         ? html`<div
-            style="font-size:12px;color:#4a5a6a;padding:4px 0;user-select:none;"
+            style="font-size:12px;color:#4a5a6a;padding:4px 0;user-select:none;display:flex;align-items:center;gap:5px;"
           >
-            ✨ Want to see your impact stats?
+            ${renderIcon(html, "aiAssist", { size: 12 })}
+            Want to see your impact stats?
           </div>`
         : html`
             <div
               style="display:flex;align-items:center;gap:5px;color:#7aadff;cursor:pointer;font-size:12px;font-weight:500;padding:4px 0;user-select:none;transition:color 0.15s;"
               onMouseEnter=${() => setStatsExpanded(true)}
             >
-              ✨ Want to see your impact stats?
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <path d="M9 18l6-6-6-6" />
-              </svg>
+              ${renderIcon(html, "aiAssist", { size: 12 })}
+              Want to see your impact stats?
+              ${renderIcon(html, "next", { size: 11 })}
             </div>
           `;
 
@@ -502,19 +496,9 @@ export async function createFeedbackPopup() {
                 e.currentTarget.style.color = "#7aadff";
               }}
             >
-              <span
-                >✦ Stand out by showing your impact stats to your peers</span
-              >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <path d="M9 18l6-6-6-6" />
-              </svg>
+                ${renderIcon(html, "aiAssist", { size: 12 })}
+                <span>Stand out by showing your impact stats to your peers</span>
+                ${renderIcon(html, "next", { size: 12 })}
             </div>
           </div>
         </div>
@@ -541,34 +525,8 @@ export async function createFeedbackPopup() {
           style="position:static;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;cursor:pointer;transition:all 0.15s ease;flex-shrink:0;color:${buttonColor()};border:${buttonBorder()};background:${buttonBg()};"
         >
           ${type === "up"
-            ? html`<svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z"
-                />
-                <path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
-              </svg>`
-            : html`<svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z"
-                />
-                <path
-                  d="M17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"
-                />
-              </svg>`}
+            ? renderIcon(html, "helpful", { size: 13 })
+            : renderIcon(html, "notHelpful", { size: 13 })}
         </button>
 
         ${popupVisible &&
@@ -592,7 +550,10 @@ export async function createFeedbackPopup() {
             type === "up" &&
             html`
               <div>
-                <div style=${headingStyle}>👍 Thanks for your feedback!</div>
+                <div style="display:flex;align-items:center;gap:8px;${headingStyle}">
+                  ${renderIcon(html, "helpful", { size: 16 })}
+                  <span>Thanks for your feedback!</span>
+                </div>
                 <div style=${subStyle}>
                   What did you like about this review comment?
                 </div>
@@ -631,8 +592,11 @@ export async function createFeedbackPopup() {
               <div
                 style="min-height:220px;display:flex;flex-direction:column;justify-content:space-between;"
               >
-                <div style=${headingStyle}>
-                  🎉 Thanks for your detailed feedback!
+                <div>
+                  <div style="display:flex;justify-content:center;margin-bottom:10px;">
+                    ${renderIcon(html, "successStatus", { size: 24 })}
+                  </div>
+                  <div style=${headingStyle}>Thanks for your detailed feedback!</div>
                 </div>
                 <div
                   style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07);"
@@ -646,8 +610,9 @@ export async function createFeedbackPopup() {
             type === "down" &&
             html`
               <div>
-                <div style=${headingStyle}>
-                  👎 We're sorry it didn't meet your expectations!
+                <div style="display:flex;align-items:center;gap:8px;${headingStyle}">
+                  ${renderIcon(html, "notHelpful", { size: 16 })}
+                  <span>We're sorry it didn't meet your expectations!</span>
                 </div>
                 <div style="margin-bottom:8px;">
                   <div
@@ -710,8 +675,9 @@ export async function createFeedbackPopup() {
             type === "down" &&
             html`
               <div>
-                <div style=${headingStyle}>
-                  🙏 Thanks — we'll work on making it better!
+                <div style="display:flex;align-items:center;gap:8px;${headingStyle}">
+                  ${renderIcon(html, "feedback", { size: 16 })}
+                  <span>Thanks. We'll work on making it better.</span>
                 </div>
               </div>
             `}
@@ -734,7 +700,7 @@ export async function createFeedbackPopup() {
                 title="Close (Esc)"
                 style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#8899bb;cursor:pointer;padding:4px 9px;font-size:14px;line-height:1;transition:background 0.15s;"
               >
-                ✕
+                ${renderIcon(html, "close", { size: 14 })}
               </button>
               <div
                 style="font-weight:700;font-size:17px;color:#e8f0ff;margin-bottom:4px;"
@@ -742,7 +708,7 @@ export async function createFeedbackPopup() {
                 Share your impact with your peers
               </div>
               <div style="font-size:12px;color:#5a7aaa;margin-bottom:18px;">
-                Edit and post on LinkedIn to showcase your engineering impact 🚀
+                Edit and post on LinkedIn to showcase your engineering impact
               </div>
               <textarea
                 value=${linkedinText}
@@ -756,20 +722,8 @@ export async function createFeedbackPopup() {
                   ? "#22c55e"
                   : "#2d5be3"};border:none;border-radius:8px;color:white;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.2s;display:flex;align-items:center;gap:8px;"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" />
-                  <path
-                    d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
-                  />
-                </svg>
-                ${snackbar ? "✓ Copied!" : "Copy to clipboard"}
+                ${renderIcon(html, snackbar ? "copied" : "copyLogs", { size: 14 })}
+                ${snackbar ? "Copied!" : "Copy to clipboard"}
               </button>
             </div>
           </div>
@@ -780,7 +734,7 @@ export async function createFeedbackPopup() {
           <div
             style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e3a2f;border:1px solid #22c55e;border-radius:8px;padding:8px 20px;color:#4ade80;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.4);pointer-events:none;animation:fadeInUp 0.3s ease;"
           >
-            ✓ Copied to clipboard!
+            ${renderIcon(html, "copied", { className: "btn-icon", size: 13 })}Copied to clipboard!
           </div>
         `}
       </div>

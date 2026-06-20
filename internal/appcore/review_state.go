@@ -17,10 +17,11 @@ type ReviewState struct {
 	mu sync.RWMutex
 
 	// Metadata
-	ReviewID      string    `json:"reviewID"`
-	FriendlyName  string    `json:"friendlyName"`
-	GeneratedTime string    `json:"generatedTime"`
-	StartedAt     time.Time `json:"-"`
+	ReviewID       string    `json:"reviewID"`
+	FriendlyName   string    `json:"friendlyName"`
+	GeneratedTime  string    `json:"generatedTime"`
+	RepositoryPath string    `json:"repositoryPath,omitempty"`
+	StartedAt      time.Time `json:"-"`
 
 	// Status
 	Status  string `json:"status"` // "in_progress", "completed", "failed", "blocked"
@@ -182,6 +183,7 @@ func (rs *ReviewState) PrepareHTMLData() *result.HTMLTemplateData {
 
 	return &result.HTMLTemplateData{
 		GeneratedTime:      rs.GeneratedTime,
+		RepositoryPath:     rs.RepositoryPath,
 		Summary:            "", // Don't include placeholder summary
 		Status:             rs.Status,
 		TotalFiles:         rs.TotalFiles,

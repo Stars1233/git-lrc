@@ -1,4 +1,5 @@
 import { LOGO_DATA_URI } from '/static/components/utils.js';
+import { renderIcon } from '../../components/icons.js';
 import { dedupeIdentityLines, getDisplayName, getInitials } from '/static/ui-connectors/session-utils.js';
 import { UsageChip } from '/static/components/UsageChip.js';
 import { UsageBanner } from '/static/components/UsageBanner.js';
@@ -81,6 +82,7 @@ export function HeaderNav({ activePath, session, reauthInProgress, orgSwitching,
               <${UsageChip} endpoint="/api/ui/usage-chip" />
               <div class="session-pill session-bad" title=${sessionHint}>Not Authenticated</div>
               <button class="secondary" disabled=${reauthInProgress} onClick=${onReauthenticate}>
+                ${renderIcon(html, 'signIn', { className: 'btn-icon' })}
                 ${reauthInProgress ? 'Signing in...' : 'Sign in'}
               </button>
             </div>

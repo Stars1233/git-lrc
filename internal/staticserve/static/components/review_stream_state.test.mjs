@@ -28,7 +28,10 @@ test('normalizeStreamedComment returns external comment in diff-view shape', () 
         Line: 12,
         Content: 'handle error',
         Severity: 'WARNING',
+        Confidence: 'High',
+        Type: 'Risk',
         Category: '',
+        Subcategory: 'API Contract',
         IsInternal: false,
     });
 
@@ -37,7 +40,10 @@ test('normalizeStreamedComment returns external comment in diff-view shape', () 
         line: 12,
         content: 'handle error',
         severity: 'warning',
+        confidence: 'High',
+        type: 'Risk',
         category: 'review',
+        subcategory: 'API Contract',
     });
 });
 
@@ -70,7 +76,10 @@ test('extractExternalCommentsFromEvents keeps only external completed batch comm
             line: 10,
             content: 'visible',
             severity: 'info',
+            confidence: '',
+            type: '',
             category: 'review',
+            subcategory: '',
         },
     ]);
 });
@@ -96,16 +105,19 @@ test('appendStreamedCommentsToFiles appends matching comments without mutating i
     ];
 
     const nextFiles = appendStreamedCommentsToFiles(files, [
-        { file_path: 'a.go', line: 2, content: 'new-a', severity: 'warning', category: 'review' },
-        { file_path: 'b.go', line: 3, content: 'new-b', severity: 'error', category: 'review' },
-        { file_path: 'missing.go', line: 9, content: 'ignored', severity: 'info', category: 'review' },
+        { file_path: 'a.go', line: 2, content: 'new-a', severity: 'warning', confidence: 'Medium', type: 'Bug', category: 'review', subcategory: 'State' },
+        { file_path: 'b.go', line: 3, content: 'new-b', severity: 'error', confidence: 'High', type: 'Risk', category: 'review', subcategory: 'Schema' },
+        { file_path: 'missing.go', line: 9, content: 'ignored', severity: 'info', confidence: 'Low', type: 'Debt', category: 'review', subcategory: 'Noise' },
     ]);
 
     assert.equal(files[0].comments.length, 1);
     assert.equal(nextFiles[0].comments.length, 2);
     assert.equal(nextFiles[1].comments.length, 1);
     assert.equal(nextFiles[0].comments[1].content, 'new-a');
+    assert.equal(nextFiles[0].comments[1].confidence, 'Medium');
+    assert.equal(nextFiles[0].comments[1].type, 'Bug');
     assert.equal(nextFiles[1].comments[0].content, 'new-b');
+    assert.equal(nextFiles[1].comments[0].subcategory, 'Schema');
 });
 
 test('appendStreamedCommentsToFiles preserves PascalCase comments from API payloads', () => {

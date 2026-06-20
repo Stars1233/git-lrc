@@ -1,5 +1,6 @@
 // FileBlock component - collapsible file with diff
-import { waitForPreact, filePathToId, countVisibleComments } from './utils.js';
+import { waitForPreact, filePathToId } from './utils.js';
+import { countFileVisibleIssues } from './issue_filter_state.mjs';
 import { getDiffTable } from './DiffTable.js';
 
 export async function createFileBlock() {
@@ -10,7 +11,7 @@ export async function createFileBlock() {
         file,
         expanded,
         onToggle,
-        visibleSeverities,
+        issueFilters,
         hiddenCommentKeys,
         onToggleCommentVisibility,
         reviewStartMs,
@@ -22,7 +23,7 @@ export async function createFileBlock() {
         // Use file.ID if available (set by convertFilesToUIFormat), otherwise generate
         const fileId = file.ID || filePathToId(file.FilePath);
         
-        const visibleCount = countVisibleComments(file, visibleSeverities, hiddenCommentKeys);
+        const visibleCount = countFileVisibleIssues(file, issueFilters, hiddenCommentKeys);
         
         return html`
             <div 
@@ -43,7 +44,7 @@ export async function createFileBlock() {
                         hunks=${file.Hunks}
                         filePath=${file.FilePath}
                         fileId=${fileId}
-                        visibleSeverities=${visibleSeverities}
+                        issueFilters=${issueFilters}
                         hiddenCommentKeys=${hiddenCommentKeys}
                         onToggleCommentVisibility=${onToggleCommentVisibility}
                         reviewStartMs=${reviewStartMs}

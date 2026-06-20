@@ -243,6 +243,7 @@ Risk outcome.`;
   const trackItems = buildProgressTrackItems(chapters, slides.length);
   const completeTrackItem = trackItems[trackItems.length - 1];
   const totalUnitCount = trackItems.reduce((sum, trackItem) => sum + trackItem.unitCount, 0);
+  const expectedTotalUnitCount = slides.length + 1;
 
   console.assert(trackItems.length === 3, `Expected 3 track items including Complete, got ${trackItems.length}`);
   console.assert(completeTrackItem.key === 'complete', 'Final track item should use the complete key');
@@ -251,7 +252,10 @@ Risk outcome.`;
   console.assert(completeTrackItem.subchapters.length === 1, 'Complete track item should expose a single marker');
   console.assert(completeTrackItem.subchapters[0].key === 'complete::marker', 'Complete marker should have a stable dedicated key');
   console.assert(completeTrackItem.subchapters[0].offsetPct === 0, 'Complete marker should align to the start of its chunk like other markers');
-  console.assert(totalUnitCount === slides.length + 1, `Expected track units to equal slides plus completion, got ${totalUnitCount}`);
+  // Safe: this is a console.assert condition (boolean expression), not a format string;
+  // totalUnitCount/expectedTotalUnitCount are derived from local test data, not user input.
+  // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
+  console.assert(totalUnitCount === expectedTotalUnitCount, 'Expected track units to equal slides plus completion, got', totalUnitCount);
   console.log('✓ Progress track includes Complete item test passed');
 }
 

@@ -14,8 +14,11 @@ func ConvertToJSONData(data *HTMLTemplateData) *JSONTemplateData {
 					for l, comment := range line.Comments {
 						comments[l] = JSONCommentData{
 							Severity:    comment.Severity,
+							Confidence:  comment.Confidence,
+							Type:        comment.Type,
 							BadgeClass:  comment.BadgeClass,
 							Category:    comment.Category,
+							Subcategory: comment.Subcategory,
 							Content:     comment.Content,
 							HasCategory: comment.HasCategory,
 							Line:        comment.Line,
@@ -48,6 +51,7 @@ func ConvertToJSONData(data *HTMLTemplateData) *JSONTemplateData {
 
 	return &JSONTemplateData{
 		GeneratedTime:      data.GeneratedTime,
+		RepositoryPath:     data.RepositoryPath,
 		Summary:            data.Summary,
 		Status:             data.Status,
 		TotalFiles:         data.TotalFiles,

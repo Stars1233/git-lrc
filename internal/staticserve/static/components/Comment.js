@@ -1,10 +1,23 @@
 // Comment component
+import { renderIcon } from './icons.js';
 import { waitForPreact, getBadgeClass, copyToClipboard } from './utils.js';
 import { getFeedbackPopup } from './FeedbackPopup.js';
 
 export async function createComment() {
     const { html, useEffect, useState } = await waitForPreact();
     const FeedbackPopup = await getFeedbackPopup();
+
+    const renderMetaItem = (label, value, extraClass = '') => {
+        if (!value) {
+            return null;
+        }
+        return html`
+            <span class="comment-meta-item ${extraClass}">
+                <span class="comment-meta-label">${label}</span>
+                <span class="comment-meta-value">${value}</span>
+            </span>
+        `;
+    };
 
     return function Comment({ comment, filePath, codeExcerpt, commentId, visibilityKey, isHidden, onToggleVisibility, onFirstRender, renderTimingLabel, vote, onVote }) {
         const [copied, setCopied] = useState(false);
@@ -55,6 +68,13 @@ export async function createComment() {
         
         const badgeClass = getBadgeClass(comment.Severity);
         const lineLabel = comment.Line ? `:${comment.Line}` : '';
+        const metaItems = [
+            renderMetaItem('Confidence', comment.Confidence),
+            renderMetaItem('Type', comment.Type),
+            (comment.Category || comment.Subcategory)
+                ? renderMetaItem('Classification', `${comment.Category || 'Uncategorized'}${comment.Subcategory ? ` / ${comment.Subcategory}` : ''}`, 'comment-meta-item-classification')
+                : null,
+        ].filter(Boolean);
         
         return html`
             <tr class="comment-row ${isHidden ? 'comment-row-hidden' : ''}" data-line="${comment.Line}" id="${commentId}">
@@ -70,7 +90,7 @@ export async function createComment() {
                                             onClick=${handleToggleVisibility}
                                             style="position: static; opacity: 1;"
                                         >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                                            ${renderIcon(html, 'showComment')}
                                             Show
                                         </button>
                                     </div>
@@ -86,7 +106,7 @@ export async function createComment() {
                                     data-line="${comment.Line}"
                                     data-comment="${comment.Content}"
                                 >
-                                    <div class="comment-actions" style="display: flex; gap: 6px; position: absolute; right: 12px; top: 12px; align-items: center;">
+                                    <div class="comment-actions">
                                         <${FeedbackPopup}
                                             type="up"
                                             vote=${vote}
@@ -110,32 +130,37 @@ export async function createComment() {
                                             sourceType="comment"
                                         />
                                         <button
-                                            class="comment-visibility-btn"
+                                            class="comment-visibility-btn comment-action-icon-btn"
                                             title="Hide this comment from the AI Agent"
                                             onClick=${handleToggleVisibility}
-                                            style="position: static; opacity: 1;"
                                         >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-5 0-9.27-3.11-11-7.5a11.8 11.8 0 012.89-4.11M9.88 9.88a3 3 0 104.24 4.24"/><path d="M1 1l22 22"/></svg>
-                                            Hide
+                                            ${renderIcon(html, 'hideComment')}
                                         </button>
                                         <button 
-                                            class="comment-copy-btn ${copied ? 'copied' : ''}"
+                                            class="comment-copy-btn comment-action-icon-btn ${copied ? 'copied' : ''}"
                                             title="Copy issue details"
                                             onClick=${handleCopy}
-                                            style="position: static;"
                                         >
-                                            ${copied ? 'Copied!' : 'Copy'}
+                                            ${renderIcon(html, copied ? 'copied' : 'copyLogs')}
                                         </button>
                                     </div>
                                     <div class="comment-header">
-                                        <span class="comment-badge ${badgeClass}">${comment.Severity}</span>
-                                        ${comment.HasCategory && html`
-                                            <span class="comment-category">${comment.Category}</span>
-                                        `}
-                                        ${renderTimingLabel && html`
-                                            <span class="comment-arrival">${renderTimingLabel}</span>
-                                        `}
+                                        <div class="comment-header-main">
+                                            <span class="comment-badge ${badgeClass}">${comment.Severity}</span>
+                                            <span class="comment-location">${filePath}${lineLabel}</span>
+                                            ${renderTimingLabel && html`
+                                                <span class="comment-arrival">${renderTimingLabel}</span>
+                                            `}
+                                        </div>
                                     </div>
+                                    ${metaItems.length > 0 && html`
+                                        <div class="comment-meta-line">
+                                            ${metaItems.map((item, index) => html`
+                                                ${item}
+                                                ${index < metaItems.length - 1 && html`<span class="comment-meta-divider">•</span>`}
+                                            `)}
+                                        </div>
+                                    `}
                                     <div class="comment-body">${comment.Content}</div>
                                 </div>
                             `

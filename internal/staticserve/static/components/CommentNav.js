@@ -1,4 +1,5 @@
 // CommentNav component - floating prev/next comment navigator
+import { renderIcon } from './icons.js';
 import { waitForPreact } from './utils.js';
 import {
     sanitizeCommentNavState,
@@ -100,9 +101,7 @@ export async function createCommentNav() {
                     title="Previous comment (k)"
                     aria-label="Previous comment"
                 >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="15 18 9 12 15 6" />
-                    </svg>
+                    ${renderIcon(html, 'previous')}
                 </button>
                 <span class="comment-nav-counter">${display}</span>
                 <button
@@ -111,9 +110,7 @@ export async function createCommentNav() {
                     title="Next comment (j)"
                     aria-label="Next comment"
                 >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="9 18 15 12 9 6" />
-                    </svg>
+                    ${renderIcon(html, 'next')}
                 </button>
             </div>
         `;

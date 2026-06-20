@@ -128,6 +128,12 @@ make dev-ui
 
 That flow lets you edit files under `internal/staticserve/static/` and refresh the browser without rebuilding the binary for each UI change.
 
+If your UI work changes icons, button glyphs, provider marks, or icon-bearing controls, follow [docs/ui-iconography.md](./docs/ui-iconography.md).
+
+- Use the shared icon registry in `internal/staticserve/static/components/icons.js`.
+- Prefer semantic action icons over vendor logos on action buttons.
+- Do not add new emoji or Unicode button icons to shipped UI.
+
 ## Code Organization Expectations
 
 git-lrc has explicit architectural boundaries. Please follow them.

@@ -1,3 +1,5 @@
+import { renderIcon } from '../../components/icons.js';
+
 const { html, useEffect, useState } = window.preact;
 
 function formatTimestamp(value) {
@@ -133,15 +135,15 @@ export function ConnectorsPage({
           <div class="toolbar connectors-toolbar">
             <div class="btn-group btn-group-compact">
               <button class="secondary" onClick=${onRefresh} disabled=${loading}>
-                <span class="btn-icon" aria-hidden="true">↻</span>${loading ? 'Refreshing...' : 'Refresh'}
+                ${renderIcon(html, 'refresh', { className: `btn-icon ${loading ? 'ui-icon-spin' : ''}` })}${loading ? 'Refreshing...' : 'Refresh'}
               </button>
               <button class=${`${hasOrderChanges ? '' : 'secondary'} ${pulseSave ? 'pulse-attention' : ''}`.trim()} onClick=${onSaveOrder} disabled=${orderedConnectors.length < 2 || !hasOrderChanges}>
-                <span class="btn-icon" aria-hidden="true">⇅</span>Save Priority
+                ${renderIcon(html, 'reorder', { className: 'btn-icon' })}Save Priority
               </button>
             </div>
             <div class="btn-group">
               <button onClick=${onAdd}>
-                <span class="btn-icon" aria-hidden="true">＋</span>Add Connector
+                ${renderIcon(html, 'add', { className: 'btn-icon' })}Add Connector
               </button>
             </div>
           </div>
@@ -169,19 +171,19 @@ export function ConnectorsPage({
                           onDragStart=${(event) => handleDragStart(event, connector.id)}
                           onDragEnd=${handleDragEnd}
                         >
-                          <span class="btn-icon" aria-hidden="true">⋮⋮</span>
+                          ${renderIcon(html, 'drag', { className: 'btn-icon' })}
                         </button>
                         <button class="secondary icon-only" title="Move up" disabled=${index === 0} onClick=${() => onMove(String(connector.id), 'up')}>
-                          <span class="btn-icon" aria-hidden="true">↑</span>
+                          ${renderIcon(html, 'moveUp', { className: 'btn-icon' })}
                         </button>
                         <button class="secondary icon-only" title="Move down" disabled=${index === orderedConnectors.length - 1} onClick=${() => onMove(String(connector.id), 'down')}>
-                          <span class="btn-icon" aria-hidden="true">↓</span>
+                          ${renderIcon(html, 'moveDown', { className: 'btn-icon' })}
                         </button>
                         <button class="secondary" onClick=${() => onEdit(connector)}>
-                          <span class="btn-icon" aria-hidden="true">✎</span>Edit
+                          ${renderIcon(html, 'edit', { className: 'btn-icon' })}Edit
                         </button>
                         <button class="tertiary-danger" onClick=${() => onDelete(connector.id)}>
-                          <span class="btn-icon" aria-hidden="true">🗑</span>Delete
+                          ${renderIcon(html, 'delete', { className: 'btn-icon' })}Delete
                         </button>
                       </div>
                     </div>

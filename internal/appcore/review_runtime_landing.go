@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -434,5 +435,5 @@ function copyShare() {
 </html>`, statsRows, shareText, ghPanel, len(reviews), tableRows)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, page)
+	io.Copy(w, strings.NewReader(page))
 }

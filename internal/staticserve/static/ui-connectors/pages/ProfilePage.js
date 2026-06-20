@@ -1,3 +1,4 @@
+import { renderIcon } from '../../components/icons.js';
 import { dedupeIdentityLines, getDisplayName, getInitials } from '/static/ui-connectors/session-utils.js';
 
 const { html, useEffect, useState } = window.preact;
@@ -35,6 +36,7 @@ export function ProfilePage({ session, onReauthenticate, reauthInProgress }) {
         </div>
         <div class="profile-actions">
           <button onClick=${onReauthenticate} disabled=${reauthInProgress}>
+            ${renderIcon(html, 'reauthenticate', { className: 'btn-icon' })}
             ${reauthInProgress ? 'Reauthenticating...' : 'Re-authenticate'}
           </button>
         </div>
