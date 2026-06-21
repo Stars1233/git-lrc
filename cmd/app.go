@@ -36,26 +36,26 @@ do not write a commit attestation or offer to commit/push.`
 
 // Handlers contains injected command actions so CLI wiring can live outside main.
 type Handlers struct {
-	RunReviewSimple       cli.ActionFunc
-	RunReviewDebug        cli.ActionFunc
-	RunEnsure             cli.ActionFunc
-	RunUninstall          cli.ActionFunc
-	RunHooksInstall       cli.ActionFunc
-	RunHooksUninstall     cli.ActionFunc
-	RunHooksEnable        cli.ActionFunc
-	RunHooksDisable       cli.ActionFunc
-	RunHooksStatus        cli.ActionFunc
-	RunSelfUpdate         cli.ActionFunc
-	RunReviewCleanup      cli.ActionFunc
-	RunAttestationTrailer cli.ActionFunc
-	RunSetup              cli.ActionFunc
-	RunOnboard            cli.ActionFunc
-	RunUI                 cli.ActionFunc
-	RunUsageInspect                cli.ActionFunc
-	RunInternalClaudePreToolUse   cli.ActionFunc
-	RunInternalClaudeRunCommit    cli.ActionFunc
-	RunInternalClaudeSetupStart   cli.ActionFunc
-	RunInternalClaudeSetupWorker  cli.ActionFunc
+	RunReviewSimple                 cli.ActionFunc
+	RunReviewDebug                  cli.ActionFunc
+	RunEnsure                       cli.ActionFunc
+	RunUninstall                    cli.ActionFunc
+	RunHooksInstall                 cli.ActionFunc
+	RunHooksUninstall               cli.ActionFunc
+	RunHooksEnable                  cli.ActionFunc
+	RunHooksDisable                 cli.ActionFunc
+	RunHooksStatus                  cli.ActionFunc
+	RunSelfUpdate                   cli.ActionFunc
+	RunReviewCleanup                cli.ActionFunc
+	RunAttestationTrailer           cli.ActionFunc
+	RunSetup                        cli.ActionFunc
+	RunOnboard                      cli.ActionFunc
+	RunUI                           cli.ActionFunc
+	RunUsageInspect                 cli.ActionFunc
+	RunInternalClaudePreToolUse     cli.ActionFunc
+	RunInternalClaudeRunCommit      cli.ActionFunc
+	RunInternalClaudeSetupStart     cli.ActionFunc
+	RunInternalClaudeSetupWorker    cli.ActionFunc
 	RunInternalClaudeSetupSubmitKey cli.ActionFunc
 	RunInternalClaudeSetupStatus    cli.ActionFunc
 	RunRemoveAttestation            cli.ActionFunc
