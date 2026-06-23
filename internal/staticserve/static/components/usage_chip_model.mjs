@@ -9,7 +9,13 @@ export function planLabel(planCode) {
     if (normalized === 'loc_800k') return 'Team 800k';
     if (normalized === 'loc_1600k') return 'Team 1.6M';
     if (normalized === 'loc_3200k') return 'Team 3.2M';
+    if (normalized === 'enterprise') return 'Enterprise';
     return planCode;
+}
+
+export function isEnterprisePlan(planCode) {
+    const normalized = String(planCode || '').trim().toLowerCase();
+    return normalized === 'enterprise';
 }
 
 export function clampUsagePercent(value) {
