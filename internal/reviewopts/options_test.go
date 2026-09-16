@@ -220,11 +220,106 @@ func TestBuildFromContextNoServe(t *testing.T) {
 	})
 }
 
+func TestBuildFromContextAgentMode(t *testing.T) {
+	t.Run("implies no-serve, json output, and staged diff", func(t *testing.T) {
+		ctx := newOptionsTestContext(t, []string{"--agent-mode"})
+
+		opts, err := BuildFromContext(ctx, false)
+		if err != nil {
+			t.Fatalf("BuildFromContext() error = %v", err)
+		}
+		if !opts.AgentMode {
+			t.Fatalf("AgentMode = false, want true")
+		}
+		if !opts.NoServe {
+			t.Fatalf("NoServe = false, want true")
+		}
+		if opts.Serve {
+			t.Fatalf("Serve = true, want false")
+		}
+		if opts.Output != "json" {
+			t.Fatalf("Output = %q, want %q", opts.Output, "json")
+		}
+		if opts.DiffSource != "staged" {
+			t.Fatalf("DiffSource = %q, want %q", opts.DiffSource, "staged")
+		}
+	})
+
+	t.Run("respects an explicit output override", func(t *testing.T) {
+		ctx := newOptionsTestContext(t, []string{"--agent-mode", "--output", "pretty"})
+
+		opts, err := BuildFromContext(ctx, false)
+		if err != nil {
+			t.Fatalf("BuildFromContext() error = %v", err)
+		}
+		if opts.Output != "pretty" {
+			t.Fatalf("Output = %q, want %q (explicit override should win)", opts.Output, "pretty")
+		}
+	})
+
+	t.Run("does not override an explicit commit diff source", func(t *testing.T) {
+		ctx := newOptionsTestContext(t, []string{"--agent-mode", "--commit", "HEAD"})
+
+		opts, err := BuildFromContext(ctx, false)
+		if err != nil {
+			t.Fatalf("BuildFromContext() error = %v", err)
+		}
+		if opts.DiffSource != "commit" {
+			t.Fatalf("DiffSource = %q, want %q", opts.DiffSource, "commit")
+		}
+	})
+
+	t.Run("rejects agent-mode with skip", func(t *testing.T) {
+		ctx := newOptionsTestContext(t, []string{"--agent-mode", "--skip"})
+
+		_, err := BuildFromContext(ctx, false)
+		if err == nil || err.Error() != "cannot use --agent-mode and --skip together" {
+			t.Fatalf("BuildFromContext() error = %v, want agent-mode/skip conflict", err)
+		}
+	})
+
+	t.Run("rejects agent-mode with vouch", func(t *testing.T) {
+		ctx := newOptionsTestContext(t, []string{"--agent-mode", "--vouch"})
+
+		_, err := BuildFromContext(ctx, false)
+		if err == nil || err.Error() != "cannot use --agent-mode and --vouch together" {
+			t.Fatalf("BuildFromContext() error = %v, want agent-mode/vouch conflict", err)
+		}
+	})
+
+	t.Run("rejects agent-mode with blocking-review", func(t *testing.T) {
+		ctx := newOptionsTestContext(t, []string{"--agent-mode", "--blocking-review"})
+
+		_, err := BuildFromContext(ctx, false)
+		if err == nil || err.Error() != "cannot use --agent-mode and --blocking-review together" {
+			t.Fatalf("BuildFromContext() error = %v, want agent-mode/blocking-review conflict", err)
+		}
+	})
+
+	t.Run("rejects agent-mode with precommit", func(t *testing.T) {
+		ctx := newOptionsTestContext(t, []string{"--agent-mode", "--precommit"})
+
+		_, err := BuildFromContext(ctx, false)
+		if err == nil || err.Error() != "cannot use --agent-mode and --precommit together" {
+			t.Fatalf("BuildFromContext() error = %v, want agent-mode/precommit conflict", err)
+		}
+	})
+
+	t.Run("rejects agent-mode with serve", func(t *testing.T) {
+		ctx := newOptionsTestContext(t, []string{"--agent-mode", "--serve"})
+
+		_, err := BuildFromContext(ctx, false)
+		if err == nil || err.Error() != "cannot use --agent-mode and --serve together" {
+			t.Fatalf("BuildFromContext() error = %v, want agent-mode/serve conflict", err)
+		}
+	})
+}
+
 func newOptionsTestContext(t *testing.T, args []string) *cli.Context {
 	t.Helper()
 
 	set := flag.NewFlagSet("reviewopts-test", flag.ContinueOnError)
-	for _, boolName := range []string{"staged", "serve", "no-serve", "verbose", "precommit", "blocking-review", "skip", "force", "vouch", "blast-radius", "sort-by-blast-radius"} {
+	for _, boolName := range []string{"staged", "serve", "no-serve", "verbose", "precommit", "blocking-review", "skip", "force", "vouch", "blast-radius", "sort-by-blast-radius", "agent-mode"} {
 		set.Bool(boolName, false, "")
 	}
 	for _, stringName := range []string{"repo-name", "range", "commit", "diff-file", "api-url", "api-key", "output", "save-html", "save-json", "save-text", "diff-source", "blast-radius-project"} {

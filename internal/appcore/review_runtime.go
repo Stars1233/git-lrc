@@ -1032,6 +1032,72 @@ func runReviewWithOptions(opts reviewopts.Options) error {
 		// No attestation for post-commit reviews
 	}
 
+	// Plain non-interactive review: --no-serve (or --agent-mode, which implies
+	// it) without --serve, --commit/--range, or --blocking-review. None of the
+	// branches above run in this case, so without this the function would fall
+	// straight through to rendering a nil result (`renderResult` prints
+	// "null" regardless of real findings) -- this is what actually makes
+	// --agent-mode/--no-serve --output json report anything real. Deliberately
+	// does not use startTerminalStatusBubbleTea (unlike the isPostCommitReview
+	// branch above): --no-serve is documented to suppress the interactive TUI,
+	// and a TUI program could interleave with --output json on stdout.
+	if !isPostCommitReview && !opts.Serve && !useInteractive && !useBlockingReview {
+		if submissionFailed || reviewID == "" {
+			// Don't poll if submission failed; it leads to unclear 404 errors.
+		} else {
+			stopPoll := make(chan struct{})
+			var stopPollOnce sync.Once
+			stopPollFn := func() { stopPollOnce.Do(func() { close(stopPoll) }) }
+
+			var pollErr error
+			pollDone := make(chan struct{})
+			go func() {
+				if fakeMode {
+					result, pollErr = pollReviewFake(reviewID, opts.PollInterval, fakeWait, verbose, stopPoll, fakeBaseFiles, nil)
+				} else {
+					var updatedConfig Config
+					result, updatedConfig, pollErr = pollReviewWithRecovery(*config, reviewID, opts.PollInterval, opts.Timeout, verbose, stopPoll, nil)
+					config = &updatedConfig
+				}
+				close(pollDone)
+			}()
+
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+			defer signal.Stop(sigChan)
+
+			pollFinished := false
+			select {
+			case <-pollDone:
+				pollFinished = true
+			case <-sigChan:
+				stopPollFn()
+				<-pollDone
+			}
+
+			if !pollFinished && errors.Is(pollErr, reviewapi.ErrPollCancelled) {
+				return nil
+			}
+			if pollErr != nil {
+				var apiErr *reviewmodel.APIError
+				if errors.As(pollErr, &apiErr) && apiErr.StatusCode == http.StatusUnauthorized {
+					return liveReviewAuthFailureError(config.APIURL, formatLiveReviewTechnicalDetails(apiErr.Body))
+				}
+				if reviewURL != "" {
+					return fmt.Errorf("failed to poll review (see %s): %w", reviewURL, pollErr)
+				}
+				return fmt.Errorf("failed to poll review: %w", pollErr)
+			}
+
+			if opts.AgentMode {
+				attestationAction = "agent-reviewed"
+				if err := recordCoverageAndAttest("agent-reviewed", diffContent, reviewID, config.APIURL, config.APIKey, verbose, &attestationWritten); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+				}
+			}
+		}
+	}
+
 	// Interactive path (default): set up decision channels for Ctrl-C / Ctrl-S and poll
 	decisionCode := -1
 	decisionMessage := ""

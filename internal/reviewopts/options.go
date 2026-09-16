@@ -47,6 +47,7 @@ type Options struct {
 	BlastRadius           bool
 	BlastRadiusProject    string
 	SortByBlastRadius     bool
+	AgentMode             bool
 }
 
 func BuildFromContext(c *cli.Context, includeDebug bool) (Options, error) {
@@ -84,6 +85,29 @@ func BuildFromContext(c *cli.Context, includeDebug bool) (Options, error) {
 		BlastRadius:           c.Bool("blast-radius"),
 		BlastRadiusProject:    c.String("blast-radius-project"),
 		SortByBlastRadius:     c.Bool("sort-by-blast-radius"),
+		AgentMode:             c.Bool("agent-mode"),
+	}
+
+	if opts.AgentMode {
+		if opts.Skip {
+			return Options{}, fmt.Errorf("cannot use --agent-mode and --skip together")
+		}
+		if opts.Vouch {
+			return Options{}, fmt.Errorf("cannot use --agent-mode and --vouch together")
+		}
+		if opts.BlockingReview {
+			return Options{}, fmt.Errorf("cannot use --agent-mode and --blocking-review together")
+		}
+		if opts.Serve {
+			return Options{}, fmt.Errorf("cannot use --agent-mode and --serve together")
+		}
+		if opts.Precommit {
+			return Options{}, fmt.Errorf("cannot use --agent-mode and --precommit together")
+		}
+		opts.NoServe = true
+		if !c.IsSet("output") {
+			opts.Output = "json"
+		}
 	}
 
 	if opts.SortByBlastRadius {
@@ -147,6 +171,12 @@ func BuildFromContext(c *cli.Context, includeDebug bool) (Options, error) {
 			opts.Serve = true
 		}
 	} else if staged {
+		diffSource = "staged"
+	}
+
+	if opts.AgentMode && opts.DiffFile == "" && opts.CommitVal == "" && opts.RangeVal == "" {
+		// Agents almost always mean "review what I'm about to commit"; force
+		// staged even over a debug --diff-source override.
 		diffSource = "staged"
 	}
 

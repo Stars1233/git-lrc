@@ -17,6 +17,7 @@ func TestParseTrailer(t *testing.T) {
 		{"ran plain", "LiveReview Pre-Commit Check: ran", "reviewed", 0, 0, true},
 		{"ran with metrics", "LiveReview Pre-Commit Check: ran (iter:3, coverage:82%)", "reviewed", 3, 82, true},
 		{"vouched", "LiveReview Pre-Commit Check: vouched (iter:1, coverage:100%)", "vouched", 1, 100, true},
+		{"agent-reviewed", "LiveReview Pre-Commit Check: agent-reviewed (iter:1, coverage:0%)", "agent-reviewed", 1, 0, true},
 		{"skipped", "LiveReview Pre-Commit Check: skipped", "skipped", 0, 0, true},
 		{"skipped manually", "LiveReview Pre-Commit Check: skipped manually", "skipped", 0, 0, true},
 		{"indented", "    LiveReview Pre-Commit Check: ran", "reviewed", 0, 0, true},

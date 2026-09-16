@@ -254,6 +254,31 @@ git lrc review --skip
 
 No AI review. No personal attestation. The git log will record `skipped`.
 
+### Agent Mode (for coding agents / CI)
+
+Coding agents (Claude Code, Cursor, etc.) shouldn't sit and wait for a
+browser-based review UI. `--agent-mode` runs a real AI review non-interactively
+and reports the findings as JSON:
+
+```bash
+git add .
+git lrc review --agent-mode
+git commit -m "add payment validation"
+```
+
+`--agent-mode` bundles: no browser/TUI, JSON output, and staged-diff scope
+(commit/range reviews still take priority if you pass `--commit`/`--range`
+explicitly). If the review completes, it records an `agent-reviewed`
+attestation — distinct from `skipped` (no AI review ran at all) and `vouched`
+(a human approved without AI) — so the following `git commit` proceeds
+without a separate `--skip`/`--vouch` step. If the review fails (network,
+quota, timeout), no attestation is written, so `git commit` safely falls back
+to a normal review/skip/vouch decision instead of silently proceeding.
+
+Like a normal `git lrc review`, you can run `--agent-mode` more than once
+before committing (e.g. after fixing flagged issues) — the tool still tracks
+iterations and prior-coverage credit the same way it does for `review`/`vouch`.
+
 ## Risk-Scored Review View
 
 Huge diffs are hard to triage — 500 lines across 10 files, and every hunk looks equally
@@ -738,6 +763,7 @@ git lrc review --commit HEAD~3..HEAD  # review a range
 | `lrc review --range HEAD~1..HEAD`       | Review a git diff range (working/staged override)        |
 | `lrc review --vouch`                    | Vouch — skip AI, take personal responsibility            |
 | `lrc review --skip`                     | Skip review for this commit                              |
+| `lrc review --agent-mode`               | Non-interactive AI review for coding agents/CI (JSON output, auto-attests as `agent-reviewed` on completion) |
 | `lrc hooks install`                     | Install global hook dispatcher                           |
 | `lrc hooks uninstall`                   | Remove global hook dispatcher and managed scripts        |
 | `lrc hooks enable`                      | Enable hooks for current repo                            |

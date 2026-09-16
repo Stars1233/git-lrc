@@ -151,6 +151,8 @@ func runAttestationTrailer(c *cli.Context) error {
 		trailerVal = "skipped"
 	case "vouched":
 		trailerVal = "vouched"
+	case "agent-reviewed":
+		trailerVal = "agent-reviewed"
 	default:
 		trailerVal = payload.Action
 	}

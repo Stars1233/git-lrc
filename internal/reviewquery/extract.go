@@ -39,6 +39,8 @@ func parseTrailer(line string) (action string, iter int, covPct int, ok bool) {
 		action = "vouched"
 	case strings.HasPrefix(rest, "skipped"):
 		action = "skipped"
+	case strings.HasPrefix(rest, "agent-reviewed"):
+		action = "agent-reviewed"
 	default:
 		return "", 0, 0, false
 	}

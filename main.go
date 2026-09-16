@@ -47,6 +47,7 @@ var baseFlags = []cli.Flag{
 	&cli.BoolFlag{Name: "blast-radius", Value: true, Usage: "score hunks by blast radius using the local graph engine (default on; auto-indexes the current repo, silently skipped when the engine isn't installed - see `lrc graph install`); disable with --blast-radius=false", EnvVars: []string{"LRC_BLAST_RADIUS"}},
 	&cli.StringFlag{Name: "blast-radius-project", Usage: "override the codebase-memory-mcp project name to score against (default: auto-derived from the repo root; see `lrc graph status`)", EnvVars: []string{"LRC_BLAST_RADIUS_PROJECT"}},
 	&cli.BoolFlag{Name: "sort-by-blast-radius", Usage: "reorder hunks within each file by descending blast-radius score (implies --blast-radius)", EnvVars: []string{"LRC_SORT_BY_BLAST_RADIUS"}},
+	&cli.BoolFlag{Name: "agent-mode", Usage: "one-flag non-interactive review for coding agents: implies --no-serve, --output json (unless --output is set explicitly), and forces staged diff unless --commit/--range/--diff-file is given; on a completed review, writes an 'agent-reviewed' attestation so 'git commit' proceeds without a separate --skip/--vouch step", EnvVars: []string{"LRC_AGENT_MODE"}},
 }
 
 var debugFlags = []cli.Flag{

@@ -167,9 +167,9 @@ func EnsureReviewSessionsCommitSyncColumns(db *sql.DB) error {
 
 // QueryAttestationSyncCandidateForTreeHash returns the most recent
 // review_sessions row for treeHash that represents a real backend
-// submission worth syncing to a commit (action reviewed|vouched, with a
-// non-empty review_id/api_url/api_key). Returns found=false, not an error,
-// when there's nothing to sync (e.g. "skipped", or a pre-migration row).
+// submission worth syncing to a commit (action reviewed|vouched|agent-reviewed,
+// with a non-empty review_id/api_url/api_key). Returns found=false, not an
+// error, when there's nothing to sync (e.g. "skipped", or a pre-migration row).
 func QueryAttestationSyncCandidateForTreeHash(db *sql.DB, treeHash string) (id int64, branch, action, reviewID, apiURL, apiKey string, found bool, err error) {
 	if db == nil {
 		return 0, "", "", "", "", "", false, fmt.Errorf("failed to query sync candidate: nil database handle")
@@ -178,7 +178,7 @@ func QueryAttestationSyncCandidateForTreeHash(db *sql.DB, treeHash string) (id i
 		`SELECT id, branch, action, review_id, api_url, api_key
 		 FROM review_sessions
 		 WHERE tree_hash = ?
-		   AND action IN ('reviewed', 'vouched')
+		   AND action IN ('reviewed', 'vouched', 'agent-reviewed')
 		   AND COALESCE(review_id, '') != ''
 		   AND COALESCE(api_url, '') != ''
 		   AND COALESCE(api_key, '') != ''
@@ -208,7 +208,10 @@ func QueryAttestationReviewSessionCountByBranch(db *sql.DB, branch string) (int,
 	return count, nil
 }
 
-// QueryAttestationReviewedSessionsByBranch returns reviewed sessions in timestamp order.
+// QueryAttestationReviewedSessionsByBranch returns reviewed (and
+// agent-reviewed) sessions in timestamp order -- both represent a real AI
+// review that ran to completion, so both count as prior coverage for later
+// iterations on the same branch.
 func QueryAttestationReviewedSessionsByBranch(db *sql.DB, branch string) (*sql.Rows, error) {
 	if db == nil {
 		return nil, fmt.Errorf("failed to query reviewed sessions: nil database handle")
@@ -216,7 +219,7 @@ func QueryAttestationReviewedSessionsByBranch(db *sql.DB, branch string) (*sql.R
 	rows, err := db.Query(
 		`SELECT id, tree_hash, branch, action, timestamp, diff_files, review_id
 		 FROM review_sessions
-		 WHERE branch = ? AND action = 'reviewed'
+		 WHERE branch = ? AND action IN ('reviewed', 'agent-reviewed')
 		 ORDER BY timestamp ASC`,
 		branch,
 	)
